@@ -1,0 +1,4290 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Crossy Road 3D RTX — First Person</title>
+  <style>
+    /* =========================================================================
+       GAYA DASAR LAYAR PENUH, LANSKAP/POTRET & SAFE-AREA (100% MANDIRI TANPA CDN)
+       ========================================================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100dvh;
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #03050a;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #gl-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      display: block;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Glassmorphism RTX */
+    .rtx-panel {
+      background: rgba(9, 13, 24, 0.84);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .rtx-card {
+      background: rgba(18, 26, 44, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    /* =========================================================================
+       HUD ATAS 1 BARIS RAMPING (SKOR, FPS/DLSS, SIKLUS, KONTROL)
+       ========================================================================= */
+    #top-hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      padding-top: max(10px, env(safe-area-inset-top));
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-group {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      border-radius: 16px;
+    }
+
+    #score-box {
+      padding: 6px 12px;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .stat-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .stat-val {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Lencana Siklus Lingkungan & DLSS Langsung */
+    #env-bar {
+      padding: 7px 12px;
+      gap: 8px;
+      font-size: 11px;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow-x: auto;
+    }
+
+    .env-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .env-item strong {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .divider-sm {
+      width: 1px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Tombol Aksi HUD Kanan */
+    #hud-actions {
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .hud-btn {
+      cursor: pointer;
+      border-radius: 14px;
+      padding: 9px 11px;
+      min-height: 38px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #f1f5f9;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .hud-btn:hover {
+      background: rgba(30, 41, 59, 0.9);
+    }
+
+    .hud-btn:active {
+      transform: scale(0.94);
+    }
+
+    .hud-btn-emerald {
+      color: #6ee7b7;
+      border-color: rgba(52, 211, 153, 0.38);
+    }
+
+    .hud-btn-sky {
+      color: #7dd3fc;
+      border-color: rgba(56, 189, 248, 0.42);
+    }
+
+    /* Strip Status Mobile Sempit (< 840px) */
+    #mobile-env-strip {
+      display: none;
+      position: fixed;
+      top: calc(54px + env(safe-area-inset-top));
+      left: 12px;
+      right: 12px;
+      z-index: 20;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    #mobile-env-strip .strip-inner {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #cbd5e1;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    @media (max-width: 860px) {
+      #env-bar {
+        display: none;
+      }
+      #mobile-env-strip {
+        display: flex;
+      }
+      .btn-label-desktop {
+        display: none;
+      }
+    }
+
+    /* Pil Anjuran Lanskap Non-Blocking */
+    #portrait-pill {
+      position: fixed;
+      top: calc(84px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 35;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(14, 116, 144, 0.92);
+      border: 1px solid rgba(103, 232, 249, 0.55);
+      color: #ecfeff;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      max-width: calc(100vw - 24px);
+    }
+
+    #portrait-pill button {
+      cursor: pointer;
+      border: none;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    /* Banner Peringatan Dinamis */
+    #warning-banner {
+      position: fixed;
+      top: calc(66px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 22;
+      pointer-events: none;
+      background: rgba(225, 29, 72, 0.92);
+      border: 1px solid rgba(253, 164, 175, 0.75);
+      color: #ffffff;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      box-shadow: 0 0 24px rgba(225, 29, 72, 0.85);
+      animation: pulseWarn 0.55s infinite;
+    }
+
+    @keyframes pulseWarn {
+      0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.55; transform: translateX(-50%) scale(1.04); }
+    }
+
+    /* =========================================================================
+       KONTROL SENTUH: JOYSTICK KIRI + TOMBOL LURUS & LOMPAT KANAN
+       ========================================================================= */
+    #joystick-zone {
+      position: fixed;
+      left: calc(18px + env(safe-area-inset-left));
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      width: 124px;
+      height: 124px;
+      z-index: 25;
+      touch-action: none;
+    }
+
+    #joystick-base {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(56, 189, 248, 0.2), rgba(9, 13, 22, 0.74));
+      border: 2px solid rgba(56, 189, 248, 0.42);
+      box-shadow: 0 0 24px rgba(14, 165, 233, 0.26), inset 0 0 18px rgba(0, 0, 0, 0.65);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    #joystick-base.active {
+      border-color: rgba(56, 189, 248, 0.95);
+      box-shadow: 0 0 32px rgba(56, 189, 248, 0.55), inset 0 0 20px rgba(56, 189, 248, 0.28);
+    }
+
+    #joystick-knob {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #7dd3fc, #0284c7);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 6px 18px rgba(2, 132, 199, 0.75);
+      position: absolute;
+      transform: translate(0px, 0px);
+      pointer-events: none;
+    }
+
+    #right-controls {
+      position: fixed;
+      right: calc(18px + env(safe-area-inset-right));
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      z-index: 25;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    #straight-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(56, 189, 248, 0.9), rgba(2, 132, 199, 0.88));
+      border: 2px solid rgba(186, 230, 253, 0.75);
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.48), inset 0 2px 6px rgba(255, 255, 255, 0.32);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.08s ease;
+    }
+
+    #straight-btn:active, #straight-btn.pressed {
+      transform: scale(0.91);
+    }
+
+    #jump-btn {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.94), rgba(5, 150, 105, 0.88));
+      border: 2px solid rgba(167, 243, 208, 0.75);
+      box-shadow: 0 8px 26px rgba(16, 185, 129, 0.52), inset 0 2px 8px rgba(255, 255, 255, 0.35);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.08s ease;
+    }
+
+    #jump-btn:active, #jump-btn.pressed {
+      transform: scale(0.91);
+    }
+
+    @media (min-width: 768px) and (min-height: 480px) {
+      #joystick-zone {
+        width: 138px;
+        height: 138px;
+        left: calc(26px + env(safe-area-inset-left));
+        bottom: calc(22px + env(safe-area-inset-bottom));
+      }
+      #right-controls {
+        right: calc(26px + env(safe-area-inset-right));
+        bottom: calc(22px + env(safe-area-inset-bottom));
+        gap: 14px;
+      }
+      #straight-btn { width: 74px; height: 74px; }
+      #jump-btn { width: 100px; height: 100px; }
+    }
+
+    #controls-hint {
+      position: fixed;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 15;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 10px;
+      color: rgba(226, 232, 240, 0.88);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    @media (max-width: 760px) {
+      #controls-hint {
+        display: none !important;
+      }
+    }
+
+    /* =========================================================================
+       MODAL OVERLAY (LAYAR AWAL, PENGATURAN RTX 2-KOLOM, GAME OVER)
+       ========================================================================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(2, 6, 23, 0.62);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .modal-box {
+      width: 100%;
+      max-height: 88dvh;
+      overflow-y: auto;
+      border-radius: 24px;
+      padding: 20px;
+    }
+
+    .modal-box::-webkit-scrollbar { width: 5px; }
+    .modal-box::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.45);
+      border-radius: 8px;
+    }
+
+    /* Grid 2-Kolom Khusus Pengaturan RTX */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .btn-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .btn-grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .opt-btn {
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 7px 4px;
+      min-height: 32px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      transition: all 0.12s ease;
+    }
+
+    .opt-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .opt-btn.active-sky {
+      background: #38bdf8;
+      color: #020617;
+      border-color: #7dd3fc;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+    }
+
+    .opt-btn.active-emerald {
+      background: #34d399;
+      color: #020617;
+      border-color: #6ee7b7;
+      box-shadow: 0 0 12px rgba(52, 211, 153, 0.5);
+    }
+
+    .opt-btn.active-amber {
+      background: #fbbf24;
+      color: #020617;
+      border-color: #fde68a;
+    }
+
+    .opt-btn.active-teal {
+      background: #2dd4bf;
+      color: #020617;
+      border-color: #99f6e4;
+    }
+
+    .opt-btn.active-indigo {
+      background: #818cf8;
+      color: #020617;
+      border-color: #c7d2fe;
+    }
+
+    /* Custom Range Slider */
+    input[type="range"].rtx-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      outline: none;
+      margin-top: 8px;
+    }
+
+    input[type="range"].rtx-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+    }
+
+    /* Tombol CTA Utama */
+    .btn-primary-rtx {
+      cursor: pointer;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 24px;
+      min-height: 48px;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: #020617;
+      background: linear-gradient(135deg, #38bdf8, #34d399);
+      box-shadow: 0 0 28px rgba(56, 189, 248, 0.52);
+      transition: transform 0.1s ease, filter 0.15s ease;
+    }
+
+    .btn-primary-rtx:hover { filter: brightness(1.08); }
+    .btn-primary-rtx:active { transform: scale(0.97); }
+
+    .btn-secondary-rtx {
+      cursor: pointer;
+      border-radius: 16px;
+      padding: 14px 18px;
+      min-height: 48px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.1s ease, background 0.15s ease;
+    }
+
+    .btn-secondary-rtx:hover { background: rgba(16, 185, 129, 0.28); }
+    .btn-secondary-rtx:active { transform: scale(0.97); }
+
+    .btn-danger-rtx {
+      cursor: pointer;
+      border: none;
+      width: 100%;
+      border-radius: 16px;
+      padding: 14px 22px;
+      min-height: 48px;
+      font-size: 15px;
+      font-weight: 900;
+      color: #ffffff;
+      background: linear-gradient(135deg, #f43f5e, #f97316);
+      box-shadow: 0 0 24px rgba(244, 63, 94, 0.52);
+      transition: transform 0.1s ease;
+    }
+
+    .btn-danger-rtx:active { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+  <!-- Kanvas Utama Mesin 3D WebGL Mandiri -->
+  <canvas id="gl-canvas"></canvas>
+
+  <!-- HUD Atas 1 Baris Ramping -->
+  <header id="top-hud">
+    <!-- Kiri: Skor, Rekor, Koin & FPS/DLSS -->
+    <div id="score-box" class="hud-group rtx-panel">
+      <div class="stat-col">
+        <span class="stat-label" style="color:#38bdf8;">Skor</span>
+        <span id="hud-score" class="stat-val" style="font-size:19px;color:#fff;">0</span>
+      </div>
+      <div class="divider-v"></div>
+      <div class="stat-col">
+        <span class="stat-label" style="color:#94a3b8;">Rekor</span>
+        <span id="hud-highscore" class="stat-val" style="font-size:14px;color:#e2e8f0;">0</span>
+      </div>
+      <div class="divider-v"></div>
+      <div class="stat-col">
+        <span class="stat-label" style="color:#fbbf24;">Koin</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24;display:inline-block;"></span>
+          <span id="hud-coins" class="stat-val" style="font-size:14px;color:#fde68a;">0</span>
+        </div>
+      </div>
+      <div class="divider-v"></div>
+      <div class="stat-col">
+        <span class="stat-label" style="color:#34d399;">FPS • DLSS</span>
+        <span id="hud-fps-dlss" class="stat-val" style="font-size:12px;color:#6ee7b7;">60 • Quality</span>
+      </div>
+    </div>
+
+    <!-- Tengah: Status Siklus Waktu, Cuaca, Kabut & Angin -->
+    <div id="env-bar" class="hud-group rtx-panel">
+      <div class="env-item">
+        <span style="color:#fcd34d;">☀</span>
+        <strong id="hud-time-desktop">Malam Gelap RTX</strong>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="env-item">
+        <span style="color:#7dd3fc;">🌧</span>
+        <strong id="hud-weather-desktop">Cerah</strong>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="env-item">
+        <span style="color:#5eead4;">🌫</span>
+        <span>Kabut:</span>
+        <strong id="hud-fog-desktop">Tipis</strong>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="env-item">
+        <span style="color:#a5b4fc;">💨</span>
+        <span>Angin:</span>
+        <strong id="hud-wind-desktop">Sepoi 14 km/j</strong>
+      </div>
+    </div>
+
+    <!-- Kanan: Tombol Suara, Layar Penuh & Pengaturan RTX -->
+    <div id="hud-actions" class="hud-group">
+      <button id="btn-mute" type="button" class="hud-btn rtx-panel" title="Suara Aktif/Mati">
+        <svg id="icon-sound-on" width="17" height="17" fill="none" stroke="#34d399" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+        </svg>
+        <svg id="icon-sound-off" class="hidden" width="17" height="17" fill="none" stroke="#fb7185" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
+        </svg>
+      </button>
+
+      <button id="btn-fullscreen" type="button" class="hud-btn hud-btn-emerald rtx-panel" title="Layar Penuh">
+        <svg id="icon-fs-enter" width="16" height="16" fill="none" stroke="#34d399" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+        </svg>
+        <svg id="icon-fs-exit" class="hidden" width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+        </svg>
+        <span id="text-fullscreen" class="btn-label-desktop">Layar Penuh</span>
+      </button>
+
+      <button id="btn-toggle-settings" type="button" class="hud-btn hud-btn-sky rtx-panel">
+        <svg width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+        <span>Pengaturan RTX</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Strip Status Lingkungan Khusus Layar Sempit -->
+  <div id="mobile-env-strip">
+    <div class="strip-inner rtx-panel">
+      <strong id="hud-time-mobile" style="color:#fcd34d;">Malam Gelap RTX</strong>
+      <span>•</span>
+      <strong id="hud-weather-mobile" style="color:#7dd3fc;">Cerah</strong>
+      <span>•</span>
+      <span>Kabut: <strong id="hud-fog-mobile" style="color:#5eead4;">Tipis</strong></span>
+      <span>•</span>
+      <span>Angin: <strong id="hud-wind-mobile" style="color:#a5b4fc;">14 km/j</strong></span>
+    </div>
+  </div>
+
+  <!-- Pil Anjuran Lanskap Non-Blocking -->
+  <div id="portrait-pill" class="hidden">
+    <span>📱 Putar ke Lanskap untuk pandangan lebih luas</span>
+    <button id="btn-pill-landscape" type="button" style="background:#38bdf8;color:#020617;">Lanskap</button>
+    <button id="btn-pill-dismiss" type="button" style="background:rgba(255,255,255,0.2);color:#fff;">✕</button>
+  </div>
+
+  <!-- Banner Peringatan Dinamis -->
+  <div id="warning-banner" class="hidden">⚠️ KERETA EKSPRES MENDEKAT!</div>
+
+  <!-- Petunjuk Kontrol Singkat -->
+  <div id="controls-hint" class="hidden rtx-panel">
+    Joystick / WASD: Jalan • Geser Layar: Menoleh 360° (Tunduk untuk lihat kaki) • LURUS (R): Hadap Depan • LOMPAT (Spasi): Lompat
+  </div>
+
+  <!-- Virtual Joystick (Kiri Bawah) -->
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-knob"></div>
+    </div>
+  </div>
+
+  <!-- Klaster Tombol Aksi Kanan Bawah (LURUS + LOMPAT) -->
+  <div id="right-controls">
+    <button id="straight-btn" type="button" aria-label="Luruskan Pandangan" title="Hadap Lurus ke Depan (R)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-5 5m5-5l5 5" />
+      </svg>
+      <span style="font-size:9px;margin-top:1px;">LURUS</span>
+    </button>
+
+    <button id="jump-btn" type="button" aria-label="Lompat">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+      </svg>
+      <span style="font-size:11px;">LOMPAT</span>
+    </button>
+  </div>
+
+  <!-- Modal Pengaturan RTX (2-Kolom Responsif) -->
+  <div id="rtx-settings-panel" class="hidden modal-backdrop">
+    <div class="modal-box rtx-panel" style="max-width:860px;border-color:rgba(56,189,248,0.34);">
+      <div class="row-between" style="padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.14);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;"></span>
+          <h2 style="margin:0;font-size:14px;font-weight:900;letter-spacing:0.06em;text-transform:uppercase;">Pengaturan DLSS RTX, Shadow, Render Distance & Siklus</h2>
+        </div>
+        <button id="btn-close-settings" type="button" class="opt-btn" style="padding:6px 14px;color:#fff;">Tutup ✕</button>
+      </div>
+
+      <div class="settings-grid">
+        <!-- 1. DLSS RTX Upscaling & AI Sharpening -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <span style="font-weight:800;color:#6ee7b7;">DLSS RTX Upscaling</span>
+            <span id="val-dlss-mode" style="font-family:monospace;font-weight:800;color:#34d399;">Quality (0.75x)</span>
+          </div>
+          <div class="btn-grid-5">
+            <button type="button" data-dlss="off" class="opt-btn dlss-btn">OFF</button>
+            <button type="button" data-dlss="quality" class="opt-btn dlss-btn active-emerald">Quality</button>
+            <button type="button" data-dlss="balanced" class="opt-btn dlss-btn">Balanced</button>
+            <button type="button" data-dlss="performance" class="opt-btn dlss-btn">Perf</button>
+            <button type="button" data-dlss="ultraperf" class="opt-btn dlss-btn">Ultra</button>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="row-between" style="font-size:11px;color:#cbd5e1;">
+              <span>Ketajaman AI (CAS Sharpen)</span>
+              <span id="val-dlss-sharpen" style="font-family:monospace;font-weight:800;color:#6ee7b7;">0.75</span>
+            </div>
+            <input id="slider-dlss-sharpen" type="range" min="0.00" max="1.00" step="0.05" value="0.75" class="rtx-range" />
+          </div>
+        </div>
+
+        <!-- 2. Render Distance & Kabut Jarak -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <label for="slider-render-dist" style="font-weight:800;color:#7dd3fc;">Render Distance & Distance Fog</label>
+            <span id="val-render-dist" style="font-family:monospace;font-weight:800;color:#38bdf8;">115m</span>
+          </div>
+          <input id="slider-render-dist" type="range" min="60" max="160" step="5" value="115" class="rtx-range" />
+          <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">Mengatur jarak pandang peta luas & kabut jarak halus di cakrawala.</p>
+        </div>
+
+        <!-- 3. Kecerahan (Exposure) -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <label for="slider-brightness" style="font-weight:800;">Kecerahan (Exposure RTX)</label>
+            <span id="val-brightness" style="font-family:monospace;font-weight:800;color:#fcd34d;">1.15x</span>
+          </div>
+          <input id="slider-brightness" type="range" min="0.40" max="2.20" step="0.05" value="1.15" class="rtx-range" />
+          <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">Mengatur pencahayaan ACES HDR di seluruh siklus siang hingga malam.</p>
+        </div>
+
+        <!-- 4. Kualitas Shadow RTX & Resolusi Dasar -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <span style="font-weight:800;">Real-Time Shadow & Resolusi</span>
+            <button id="btn-toggle-shadows" type="button" class="opt-btn" style="padding:3px 10px;background:rgba(16,185,129,0.28);color:#6ee7b7;border-color:rgba(52,211,153,0.5);">PCF SOFT ON</button>
+          </div>
+          <div class="btn-grid-5">
+            <button type="button" data-res="0.75" class="opt-btn res-btn">0.75x</button>
+            <button type="button" data-res="1.0" class="opt-btn res-btn">1.0x</button>
+            <button type="button" data-res="1.25" class="opt-btn res-btn active-sky">1.25x</button>
+            <button type="button" data-res="1.5" class="opt-btn res-btn">1.5x</button>
+            <button type="button" data-res="2.0" class="opt-btn res-btn">2.0x Ultra</button>
+          </div>
+          <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">Bayangan pemain (Player Shadow), pohon, mobil & tiang lampu.</p>
+        </div>
+
+        <!-- 5. Pengaturan Bloom Lengkap -->
+        <div class="rtx-card" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="row-between">
+            <span style="font-weight:800;">Efek Bloom RTX</span>
+            <button id="btn-toggle-bloom" type="button" class="opt-btn" style="padding:4px 12px;background:rgba(16,185,129,0.28);color:#6ee7b7;border-color:rgba(52,211,153,0.5);">AKTIF</button>
+          </div>
+          <div>
+            <div class="row-between" style="font-size:11px;color:#cbd5e1;">
+              <span>Intensitas Bloom</span>
+              <span id="val-bloom-strength" style="font-family:monospace;font-weight:800;color:#7dd3fc;">1.10</span>
+            </div>
+            <input id="slider-bloom-strength" type="range" min="0.00" max="2.50" step="0.05" value="1.10" class="rtx-range" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <div class="row-between" style="font-size:11px;color:#cbd5e1;">
+                <span>Radius</span>
+                <span id="val-bloom-radius" style="font-family:monospace;font-weight:800;color:#7dd3fc;">0.65</span>
+              </div>
+              <input id="slider-bloom-radius" type="range" min="0.10" max="1.00" step="0.05" value="0.65" class="rtx-range" />
+            </div>
+            <div>
+              <div class="row-between" style="font-size:11px;color:#cbd5e1;">
+                <span>Threshold</span>
+                <span id="val-bloom-threshold" style="font-family:monospace;font-weight:800;color:#7dd3fc;">0.82</span>
+              </div>
+              <input id="slider-bloom-threshold" type="range" min="0.20" max="1.50" step="0.02" value="0.82" class="rtx-range" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Siklus Waktu (RTX Aktif di Semua Waktu!) -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <span style="font-weight:800;">Siklus Waktu (RTX Semua Waktu)</span>
+            <span id="val-time-mode" style="font-size:11px;font-weight:700;color:#fcd34d;">Otomatis</span>
+          </div>
+          <div class="btn-grid-3">
+            <button type="button" data-time="auto" class="opt-btn time-btn active-amber">Otomatis</button>
+            <button type="button" data-time="morning" class="opt-btn time-btn">Pagi Emas</button>
+            <button type="button" data-time="day" class="opt-btn time-btn">Siang RTX</button>
+            <button type="button" data-time="sunset" class="opt-btn time-btn">Sore Senja</button>
+            <button type="button" data-time="night" class="opt-btn time-btn">Malam Gelap RTX</button>
+          </div>
+        </div>
+
+        <!-- 7. Siklus Cuaca -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <span style="font-weight:800;">Siklus Cuaca</span>
+            <span id="val-weather-mode" style="font-size:11px;font-weight:700;color:#7dd3fc;">Otomatis</span>
+          </div>
+          <div class="btn-grid-3">
+            <button type="button" data-weather="auto" class="opt-btn weather-btn active-sky">Otomatis</button>
+            <button type="button" data-weather="clear" class="opt-btn weather-btn">Cerah</button>
+            <button type="button" data-weather="cloudy" class="opt-btn weather-btn">Mendung</button>
+            <button type="button" data-weather="drizzle" class="opt-btn weather-btn">Gerimis</button>
+            <button type="button" data-weather="rain" class="opt-btn weather-btn">Hujan Deras</button>
+            <button type="button" data-weather="storm" class="opt-btn weather-btn">Badai Petir</button>
+          </div>
+          <div class="row-between" style="margin-top:8px;font-size:11px;color:#94a3b8;">
+            <span>Kebasahan & Refleksi Jalan:</span>
+            <span id="val-wetness" style="font-family:monospace;font-weight:800;color:#22d3ee;">18%</span>
+          </div>
+        </div>
+
+        <!-- 8. Siklus Kabut Dinamis -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <span style="font-weight:800;">Siklus Kabut Atmosfer</span>
+            <span id="val-fog-mode" style="font-size:11px;font-weight:700;color:#5eead4;">Otomatis</span>
+          </div>
+          <div class="btn-grid-3">
+            <button type="button" data-fog="auto" class="opt-btn fog-btn active-teal">Otomatis</button>
+            <button type="button" data-fog="none" class="opt-btn fog-btn">Cerah</button>
+            <button type="button" data-fog="light" class="opt-btn fog-btn">Kabut Tipis</button>
+            <button type="button" data-fog="heavy" class="opt-btn fog-btn">Kabut Tebal</button>
+            <button type="button" data-fog="random" class="opt-btn fog-btn">Kabut Acak</button>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="row-between" style="font-size:11px;color:#cbd5e1;">
+              <span>Kepadatan Kabut</span>
+              <span id="val-fog-density" style="font-family:monospace;font-weight:800;color:#5eead4;">0.009</span>
+            </div>
+            <input id="slider-fog-density" type="range" min="0.000" max="0.045" step="0.001" value="0.009" class="rtx-range" />
+          </div>
+        </div>
+
+        <!-- 9. Siklus Angin (Menggoyangkan Dedaunan Pohon) -->
+        <div class="rtx-card">
+          <div class="row-between">
+            <span style="font-weight:800;">Siklus Angin (Animasi Pohon)</span>
+            <span id="val-wind-mode" style="font-size:11px;font-weight:700;color:#a5b4fc;">Otomatis</span>
+          </div>
+          <div class="btn-grid-3">
+            <button type="button" data-wind="auto" class="opt-btn wind-btn active-indigo">Otomatis</button>
+            <button type="button" data-wind="calm" class="opt-btn wind-btn">Tenang</button>
+            <button type="button" data-wind="breeze" class="opt-btn wind-btn">Sepoi</button>
+            <button type="button" data-wind="strong" class="opt-btn wind-btn">Kencang</button>
+            <button type="button" data-wind="storm" class="opt-btn wind-btn">Badai</button>
+          </div>
+        </div>
+
+        <!-- 10. Kontrol & Sensitivitas Kamera -->
+        <div class="rtx-card" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="row-between">
+            <span style="font-weight:800;">Balik Sumbu Kamera</span>
+            <button id="btn-toggle-invert-cam" type="button" class="opt-btn" style="padding:4px 12px;background:rgba(148,163,184,0.2);color:#cbd5e1;border-color:rgba(148,163,184,0.38);">OFF</button>
+          </div>
+          <div>
+            <div class="row-between" style="font-size:11px;color:#cbd5e1;">
+              <span>Sensitivitas Kamera</span>
+              <span id="val-cam-sensitivity" style="font-family:monospace;font-weight:800;color:#7dd3fc;">1.00x</span>
+            </div>
+            <input id="slider-cam-sensitivity" type="range" min="0.30" max="2.50" step="0.05" value="1.00" class="rtx-range" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layar Awal -->
+  <div id="start-overlay" class="modal-backdrop">
+    <div class="modal-box rtx-panel" style="max-width:640px;text-align:center;border-color:rgba(56,189,248,0.38);">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;background:rgba(52,211,153,0.16);border:1px solid rgba(52,211,153,0.42);color:#6ee7b7;font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#34d399;"></span>
+        <span>DLSS RTX Upscaling • Real-Time Shadows • Dynamic First-Person Body</span>
+      </div>
+      <h1 style="margin:0 0 8px;font-size:clamp(24px,4.5vw,38px);font-weight:900;letter-spacing:-0.02em;">
+        CROSSY ROAD <span style="background:linear-gradient(90deg,#38bdf8,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">3D RTX ULTRA</span>
+      </h1>
+      <p style="margin:0 auto 16px;max-width:540px;font-size:13px;line-height:1.55;color:#cbd5e1;">
+        Jelajahi peta luas dengan tubuh karakter First-Person dinamis (lihat tangan berayun & kaki melangkah saat menunduk), bayangan real-time PCF, tekstur HD 512x512, dedaunan bergoyang angin, serta refleksi RTX di semua waktu!
+      </p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;text-align:left;margin-bottom:18px;">
+        <div class="rtx-card" style="padding:10px 12px;">
+          <div style="font-size:12px;font-weight:800;color:#7dd3fc;margin-bottom:3px;">🧍 Dynamic First-Person & Shadow</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.4;">Tundukkan layar ke bawah untuk melihat tangan dan kaki Anda bergerak serta bayangan tubuh Anda di tanah.</div>
+        </div>
+        <div class="rtx-card" style="padding:10px 12px;">
+          <div style="font-size:12px;font-weight:800;color:#6ee7b7;margin-bottom:3px;">⚡ DLSS RTX & Peta Luas 160m</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.4;">Aktifkan DLSS Quality/Performance, atur Render Distance, dan nikmati RTX Pagi, Siang, Sore & Malam.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <button id="btn-start-game" type="button" class="btn-primary-rtx" style="flex:1 1 220px;">MULAI MAIN</button>
+        <button id="btn-start-fullscreen" type="button" class="btn-secondary-rtx" style="flex:0 1 auto;">
+          <svg width="16" height="16" fill="none" stroke="#34d399" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+          </svg>
+          <span>Layar Penuh</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layar Game Over -->
+  <div id="gameover-overlay" class="hidden modal-backdrop">
+    <div class="modal-box rtx-panel" style="max-width:420px;text-align:center;border-color:rgba(244,63,94,0.48);">
+      <div style="width:48px;height:48px;margin:0 auto 10px;border-radius:14px;background:rgba(244,63,94,0.22);border:1px solid rgba(244,63,94,0.5);display:flex;align-items:center;justify-content:center;font-size:24px;">💥</div>
+      <h2 style="margin:0 0 4px;font-size:22px;font-weight:900;">PERMAINAN BERAKHIR</h2>
+      <p id="gameover-reason" style="margin:0 0 16px;font-size:13px;font-weight:700;color:#fda4af;">Tertabrak kendaraan di jalan raya!</p>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;">
+        <div class="rtx-card" style="padding:10px 6px;">
+          <div class="stat-label" style="color:#94a3b8;">Skor</div>
+          <div id="go-score" class="stat-val" style="font-size:20px;color:#fff;margin-top:2px;">0</div>
+        </div>
+        <div class="rtx-card" style="padding:10px 6px;">
+          <div class="stat-label" style="color:#38bdf8;">Rekor</div>
+          <div id="go-highscore" class="stat-val" style="font-size:20px;color:#7dd3fc;margin-top:2px;">0</div>
+        </div>
+        <div class="rtx-card" style="padding:10px 6px;">
+          <div class="stat-label" style="color:#fbbf24;">Koin</div>
+          <div id="go-coins" class="stat-val" style="font-size:20px;color:#fde68a;margin-top:2px;">0</div>
+        </div>
+      </div>
+
+      <button id="btn-restart-game" type="button" class="btn-danger-rtx">MAIN LAGI</button>
+    </div>
+  </div>
+
+  <!-- Banner Fallback jika GPU/WebGL dinonaktifkan di browser -->
+  <div id="webgl-error-box" class="hidden modal-backdrop" style="z-index:60;">
+    <div class="modal-box rtx-panel" style="max-width:440px;text-align:center;border-color:#f43f5e;">
+      <h3 style="margin:0 0 8px;color:#fda4af;">Akselerasi WebGL Tidak Aktif</h3>
+      <p id="webgl-error-msg" style="margin:0;font-size:13px;color:#e2e8f0;line-height:1.5;">
+        Peramban Anda belum mengaktifkan akselerasi perangkat keras WebGL. Aktifkan akselerasi grafis di pengaturan browser untuk menjalankan shader RTX 3D.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * CROSSY ROAD 3D RTX ULTRA — FIRST PERSON (100% WEBGL NATIVE MANDIRI)
+     * Fitur Lengkap:
+     * 1. DLSS RTX Upscaling + Contrast Adaptive Sharpening (CAS) + FPS Monitor
+     * 2. Tekstur Prosedural Resolusi Tinggi (1024x1024 Atlas = 4x 512x512 HD)
+     *    + Pohon Berlapis dengan Ranting & Dedaunan Bergoyang Real-Time oleh Angin
+     * 3. Refleksi Planar Multi-Tap Smooth + Pencahayaan Global RTX Merata
+     * 4. Visual RTX Memukau di Semua Siklus Waktu (Pagi, Siang, Sore, Malam)
+     * 5. Real-Time Directional PCF Shadow Mapping + Full Player Shadow
+     * 6. Peta Luas (±32 Playable, ±64 Visual, 34 Jalur) + Render Distance Fog
+     * 7. Dynamic First-Person Body (Tangan, Tubuh & Kaki Terlihat & Bergerak)
+     * =========================================================================
+     */
+    (function () {
+      'use strict';
+
+      // =======================================================================
+      // 1. KONSTANTA DUNIA LUAS, STATUS PERMAINAN & KONFIGURASI RTX
+      // =======================================================================
+      const LANE_WIDTH = 3.2;
+      const PLAYABLE_HALF_X = 32.0; // Peta bermain kiri-kanan diperluas menjadi ±32 unit!
+      const VISUAL_HALF_X = 64.0;   // Lebar visual dunia ±64 unit (128 unit total)
+      const EYE_HEIGHT = 1.66;
+      const PLAYER_RADIUS = 0.42;
+      const MOVE_SPEED = 7.4;
+      const JUMP_VELOCITY = 7.1;
+      const GRAVITY = 20.0;
+      const LANES_AHEAD = 34;       // Jarak pandang ke depan 34 jalur (~110m+)
+      const LANES_BEHIND = 10;
+      const MAX_LIGHTS = 16;        // 16 sumber cahaya RTX dinamis terdekat per frame
+      const MAX_BATCH_VERTS = 48000;
+
+      const DLSS_PRESETS = {
+        off:         { label: 'OFF',      scale: 1.00, fullText: 'OFF (1.00x Native)' },
+        quality:     { label: 'Quality',  scale: 0.75, fullText: 'Quality (0.75x)' },
+        balanced:    { label: 'Balanced', scale: 0.67, fullText: 'Balanced (0.67x)' },
+        performance: { label: 'Perf',     scale: 0.55, fullText: 'Performance (0.55x)' },
+        ultraperf:   { label: 'Ultra',    scale: 0.45, fullText: 'Ultra Perf (0.45x)' }
+      };
+
+      const gameState = {
+        phase: 'start', // 'start' | 'playing' | 'gameover'
+        score: 0,
+        highScore: 0,
+        coins: 0,
+        maxLaneReached: 0,
+        timeElapsed: 0,
+        lightningFlash: 0,
+        nextLightningTimer: 6.5,
+        cameraShake: 0,
+        fps: 60
+      };
+
+      try {
+        gameState.highScore = parseInt(localStorage.getItem('cr3d_rtx_highscore') || '0', 10) || 0;
+      } catch (e) {
+        gameState.highScore = 0;
+      }
+
+      const player = {
+        pos: { x: 0, y: 0, z: 0 },
+        vel: { x: 0, y: 0, z: 0 },
+        yaw: 0,
+        pitch: -0.10,
+        targetYaw: null,
+        onGround: true,
+        bobTimer: 0,
+        bobOffset: 0,
+        landingDip: 0,
+        tiltRoll: 0,
+        carryingVx: 0,
+        clinkCooldown: 0,
+        stepTimer: 0,
+        // Animasi tubuh dinamis First-Person
+        stridePhase: 0,
+        moveBlend: 0,
+        jumpBlend: 0
+      };
+
+      const rtxConfig = {
+        dlssMode: 'quality',
+        dlssSharpen: 0.75,
+        renderDistance: 115,
+        shadowsEnabled: true,
+        brightness: 1.15,
+        bloomEnabled: true,
+        bloomStrength: 1.10,
+        bloomRadius: 0.65,
+        bloomThreshold: 0.82,
+        resolutionScale: 1.25,
+        invertCameraAxis: false,
+        cameraSensitivity: 1.00,
+
+        timeMode: 'auto',     // 'auto' | 'morning' | 'day' | 'sunset' | 'night'
+        weatherMode: 'auto',  // 'auto' | 'clear' | 'cloudy' | 'drizzle' | 'rain' | 'storm'
+        fogMode: 'auto',      // 'auto' | 'none' | 'light' | 'heavy' | 'random'
+        windMode: 'auto',     // 'auto' | 'calm' | 'breeze' | 'strong' | 'storm'
+        fogManualDensity: 0.009
+      };
+
+      const envState = {
+        timeCycleClock: 0.88,
+        currentTimeLabel: 'Malam Gelap RTX',
+        nightFactor: 1.0,
+        sunDir: [0.32, -0.55, -0.45],
+        sunColor: [0.10, 0.14, 0.26],
+        skyTop: [0.008, 0.012, 0.032],
+        skyHorizon: [0.02, 0.032, 0.075],
+        ambientSky: [0.035, 0.052, 0.11],
+        ambientGround: [0.018, 0.024, 0.045],
+
+        weatherTimer: 22,
+        activeWeather: 'clear',
+        currentWeatherLabel: 'Cerah',
+        wetness: 0.18,
+        targetWetness: 0.18,
+        rainIntensity: 0.0,
+        targetRainIntensity: 0.0,
+
+        fogTimer: 16,
+        activeFog: 'light',
+        currentFogLabel: 'Kabut Tipis',
+        fogDensity: 0.009,
+        targetFogDensity: 0.009,
+
+        windTimer: 18,
+        activeWind: 'breeze',
+        currentWindLabel: 'Sepoi',
+        windSpeed: 14,
+        targetWindSpeed: 14,
+        windAngle: 0.45
+      };
+
+      // =======================================================================
+      // 2. GENERATOR EFEK SUARA PROSEDURAL WEB AUDIO API (TANPA FILE EKSTERNAL)
+      // =======================================================================
+      class ProceduralAudio {
+        constructor() {
+          this.ctx = null;
+          this.muted = false;
+          this.rainGain = null;
+          this.initialized = false;
+        }
+
+        init() {
+          if (this.initialized) return;
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            this.ctx = new AudioCtx();
+
+            const bufferSize = this.ctx.sampleRate * 2;
+            const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+              data[i] = Math.random() * 2 - 1;
+            }
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1150;
+            filter.Q.value = 0.65;
+
+            this.rainGain = this.ctx.createGain();
+            this.rainGain.gain.value = 0.0;
+
+            noise.connect(filter);
+            filter.connect(this.rainGain);
+            this.rainGain.connect(this.ctx.destination);
+            noise.start();
+            this.initialized = true;
+          } catch (e) {}
+        }
+
+        resume() {
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+        }
+
+        setRainVolume(rainAmount, windAmount) {
+          if (!this.initialized || !this.rainGain) return;
+          const target = this.muted ? 0 : Math.min(0.14, rainAmount * 0.11 + windAmount * 0.025);
+          this.rainGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.25);
+        }
+
+        playJump() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(210, now);
+            osc.frequency.exponentialRampToValueAtTime(520, now + 0.13);
+            gain.gain.setValueAtTime(0.13, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.14);
+          } catch (e) {}
+        }
+
+        playStep() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(110 + Math.random() * 25, now);
+            osc.frequency.exponentialRampToValueAtTime(55, now + 0.045);
+            gain.gain.setValueAtTime(0.045, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.05);
+          } catch (e) {}
+        }
+
+        playCoin() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(987.77, now);
+            osc.frequency.setValueAtTime(1318.51, now + 0.07);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.28);
+          } catch (e) {}
+        }
+
+        playPoleClink() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(185, now);
+            osc.frequency.exponentialRampToValueAtTime(82, now + 0.08);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.09);
+          } catch (e) {}
+        }
+
+        playTrainWarning() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.24);
+          } catch (e) {}
+        }
+
+        playThunder() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(68, now);
+            osc.frequency.exponentialRampToValueAtTime(24, now + 1.1);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.15);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 1.15);
+          } catch (e) {}
+        }
+
+        playCrash() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(145, now);
+            osc.frequency.exponentialRampToValueAtTime(34, now + 0.42);
+            gain.gain.setValueAtTime(0.24, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.44);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.44);
+          } catch (e) {}
+        }
+      }
+
+      const sound = new ProceduralAudio();
+
+      // =======================================================================
+      // 3. PUSTAKA MATEMATIKA MATRIKS 4x4 (PERSPECTIVE, ORTHO, LOOKAT, FPS)
+      // =======================================================================
+      const Mat4 = {
+        create() {
+          const m = new Float32Array(16);
+          m[0] = 1; m[5] = 1; m[10] = 1; m[15] = 1;
+          return m;
+        },
+        perspective(out, fovyRad, aspect, near, far) {
+          const f = 1.0 / Math.tan(fovyRad * 0.5);
+          const nf = 1.0 / (near - far);
+          out.fill(0);
+          out[0] = f / aspect;
+          out[5] = f;
+          out[10] = (far + near) * nf;
+          out[11] = -1.0;
+          out[14] = (2.0 * far * near) * nf;
+          return out;
+        },
+        ortho(out, left, right, bottom, top, near, far) {
+          const lr = 1 / (left - right);
+          const bt = 1 / (bottom - top);
+          const nf = 1 / (near - far);
+          out.fill(0);
+          out[0] = -2 * lr;
+          out[5] = -2 * bt;
+          out[10] = 2 * nf;
+          out[12] = (left + right) * lr;
+          out[13] = (top + bottom) * bt;
+          out[14] = (far + near) * nf;
+          out[15] = 1;
+          return out;
+        },
+        lookAt(out, eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ) {
+          let zx = eyeX - centerX;
+          let zy = eyeY - centerY;
+          let zz = eyeZ - centerZ;
+          let len = Math.hypot(zx, zy, zz) || 1;
+          zx /= len; zy /= len; zz /= len;
+
+          let xx = upY * zz - upZ * zy;
+          let xy = upZ * zx - upX * zz;
+          let xz = upX * zy - upY * zx;
+          len = Math.hypot(xx, xy, xz);
+          if (len < 0.0001) {
+            xx = 1; xy = 0; xz = 0;
+          } else {
+            xx /= len; xy /= len; xz /= len;
+          }
+
+          const yx = zy * xz - zz * xy;
+          const yy = zz * xx - zx * xz;
+          const yz = zx * xy - zy * xx;
+
+          out[0] = xx; out[1] = yx; out[2] = zx; out[3] = 0;
+          out[4] = xy; out[5] = yy; out[6] = zy; out[7] = 0;
+          out[8] = xz; out[9] = yz; out[10] = zz; out[11] = 0;
+          out[12] = -(xx * eyeX + xy * eyeY + xz * eyeZ);
+          out[13] = -(yx * eyeX + yy * eyeY + yz * eyeZ);
+          out[14] = -(zx * eyeX + zy * eyeY + zz * eyeZ);
+          out[15] = 1;
+          return out;
+        },
+        multiply(out, a, b) {
+          const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+          const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+          const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+          const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+          let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+          out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+          out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+          out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+          out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+
+          b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+          out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+          out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+          out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+          out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+
+          b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+          out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+          out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+          out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+          out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+
+          b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+          out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+          out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+          out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+          out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+          return out;
+        },
+        fromFPS(out, eyeX, eyeY, eyeZ, yaw, pitch, roll) {
+          const cy = Math.cos(yaw), sy = Math.sin(yaw);
+          const cp = Math.cos(pitch), sp = Math.sin(pitch);
+          const cr = Math.cos(roll), sr = Math.sin(roll);
+
+          const fx = -sy * cp;
+          const fy = sp;
+          const fz = -cy * cp;
+
+          const r0x = cy;
+          const r0y = 0;
+          const r0z = -sy;
+
+          const u0x = r0y * fz - r0z * fy;
+          const u0y = r0z * fx - r0x * fz;
+          const u0z = r0x * fy - r0y * fx;
+
+          const rx = r0x * cr + u0x * sr;
+          const ry = r0y * cr + u0y * sr;
+          const rz = r0z * cr + u0z * sr;
+
+          const ux = -r0x * sr + u0x * cr;
+          const uy = -r0y * sr + u0y * cr;
+          const uz = -r0z * sr + u0z * cr;
+
+          const bx = -fx;
+          const by = -fy;
+          const bz = -fz;
+
+          out[0] = rx; out[1] = ux; out[2] = bx; out[3] = 0;
+          out[4] = ry; out[5] = uy; out[6] = by; out[7] = 0;
+          out[8] = rz; out[9] = uz; out[10] = bz; out[11] = 0;
+          out[12] = -(rx * eyeX + ry * eyeY + rz * eyeZ);
+          out[13] = -(ux * eyeX + uy * eyeY + uz * eyeZ);
+          out[14] = -(bx * eyeX + by * eyeY + bz * eyeZ);
+          out[15] = 1;
+          return out;
+        }
+      };
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function clamp(v, min, max) {
+        return v < min ? min : (v > max ? max : v);
+      }
+
+      // =======================================================================
+      // 4. INISIALISASI KONTEKS WEBGL & GENERATOR TEKSTUR HD 1024x1024 (4x512)
+      // =======================================================================
+      const canvas = document.getElementById('gl-canvas');
+      const glOpts = {
+        alpha: false,
+        antialias: true,
+        powerPreference: 'high-performance',
+        stencil: false
+      };
+
+      const gl = canvas.getContext('webgl2', glOpts)
+        || canvas.getContext('webgl', glOpts)
+        || canvas.getContext('experimental-webgl', glOpts);
+
+      if (!gl) {
+        document.getElementById('webgl-error-box').classList.remove('hidden');
+        return;
+      }
+
+      /**
+       * Membuat Atlas Tekstur Resolusi Tinggi 1024x1024 (4 ubin masing-masing 512x512):
+       * Ubin 0 [0.0..0.5, 0.0..0.5]: Serat kulit pohon organik & urat daun berlapis
+       * Ubin 1 [0.5..1.0, 0.0..0.5]: Panel bodi metalik kendaraan, garis pintu, gril & tapak ban
+       * Ubin 2 [0.0..0.5, 0.5..1.0]: Butiran mikro aspal RTX, trotoar berpola & helai rumput
+       * Ubin 3 [0.5..1.0, 0.5..1.0]: Serat kayu bantalan rel, logam sikat & gelombang air
+       */
+      function createHighResDetailAtlas() {
+        const texCanvas = document.createElement('canvas');
+        texCanvas.width = 1024;
+        texCanvas.height = 1024;
+        const ctx = texCanvas.getContext('2d');
+
+        // Helper noise deterministik cepat
+        const hash = (x, y) => {
+          const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+          return s - Math.floor(s);
+        };
+
+        // --- UBIN 0 (0, 0, 512, 512): Tekstur Kulit Kayu & Dedaunan ---
+        ctx.fillStyle = '#d4d4d4';
+        ctx.fillRect(0, 0, 512, 512);
+        for (let y = 0; y < 512; y += 2) {
+          for (let x = 0; x < 512; x += 2) {
+            const barkRidge = Math.sin(x * 0.19 + Math.sin(y * 0.04) * 2.4) * 0.14;
+            const leafCluster = Math.sin(x * 0.25) * Math.cos(y * 0.25) * 0.12;
+            const grain = (hash(x, y) - 0.5) * 0.16;
+            const v = clamp(Math.round((0.86 + barkRidge + leafCluster + grain) * 255), 140, 255);
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.fillRect(x, y, 2, 2);
+          }
+        }
+        // Tambahkan guratan serat kulit pohon & urat daun halus
+        ctx.strokeStyle = 'rgba(95, 95, 95, 0.24)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 64; i++) {
+          const sx = (i * 8) + 4;
+          ctx.beginPath();
+          ctx.moveTo(sx, 0);
+          ctx.bezierCurveTo(sx + 6, 170, sx - 6, 340, sx + 2, 512);
+          ctx.stroke();
+        }
+
+        // --- UBIN 1 (512, 0, 512, 512): Tekstur Panel Bodi Kendaraan Metalik & Kaca ---
+        ctx.fillStyle = '#ececec';
+        ctx.fillRect(512, 0, 512, 512);
+        // Micro metallic flake
+        for (let y = 0; y < 512; y += 2) {
+          for (let x = 512; x < 1024; x += 2) {
+            const flake = (hash(x, y) - 0.5) * 0.07;
+            const sheen = Math.sin((x + y) * 0.03) * 0.04;
+            const v = clamp(Math.round((0.95 + flake + sheen) * 255), 210, 255);
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.fillRect(x, y, 2, 2);
+          }
+        }
+        // Garis panel pintu, kap mesin, dan lis krom tajam
+        ctx.strokeStyle = 'rgba(70, 75, 85, 0.42)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(524, 14, 488, 484);
+        ctx.beginPath();
+        ctx.moveTo(768, 14);
+        ctx.lineTo(768, 498);
+        ctx.moveTo(524, 256);
+        ctx.lineTo(1012, 256);
+        ctx.stroke();
+        // Kisi gril / ventilasi detail
+        ctx.fillStyle = 'rgba(60, 65, 75, 0.25)';
+        for (let gy = 40; gy <= 110; gy += 12) {
+          ctx.fillRect(550, gy, 180, 5);
+        }
+
+        // --- UBIN 2 (0, 512, 512, 512): Butiran Mikro Aspal RTX & Rumput ---
+        ctx.fillStyle = '#d8d8d8';
+        ctx.fillRect(0, 512, 512, 512);
+        for (let y = 512; y < 1024; y += 2) {
+          for (let x = 0; x < 512; x += 2) {
+            const aggregate = (hash(x * 1.3, y * 1.3) - 0.5) * 0.24;
+            const blade = Math.sin(x * 0.45 + hash(x, y) * 1.5) * 0.08;
+            const v = clamp(Math.round((0.86 + aggregate + blade) * 255), 145, 255);
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.fillRect(x, y, 2, 2);
+          }
+        }
+
+        // --- UBIN 3 (512, 512, 512, 512): Log Kayu, Baja Sikat & Gelombang Air ---
+        ctx.fillStyle = '#dfdfdf';
+        ctx.fillRect(512, 512, 512, 512);
+        for (let y = 512; y < 1024; y += 2) {
+          for (let x = 512; x < 1024; x += 2) {
+            const wave = Math.sin(x * 0.09 + Math.cos(y * 0.08) * 2.0) * 0.12;
+            const brush = (hash(x * 0.2, y * 2.1) - 0.5) * 0.14;
+            const v = clamp(Math.round((0.88 + wave + brush) * 255), 160, 255);
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.fillRect(x, y, 2, 2);
+          }
+        }
+
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texCanvas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+
+        const aniso = gl.getExtension('EXT_texture_filter_anisotropic')
+          || gl.getExtension('MOZ_EXT_texture_filter_anisotropic')
+          || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+        if (aniso) {
+          const maxAniso = gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+          gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, maxAniso));
+        }
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return tex;
+      }
+
+      const detailAtlasTex = createHighResDetailAtlas();
+
+      // =======================================================================
+      // 5. SHADER GLSL KOMPATIBEL SEMUA GPU (SHADOW MAP + TEXTURE + RTX + DLSS)
+      // =======================================================================
+      const PRECISION_HEADER = `
+        #ifdef GL_FRAGMENT_PRECISION_HIGH
+          precision highp float;
+        #else
+          precision mediump float;
+        #endif
+      `;
+
+      // --- A. Vertex Shader Shadow Pass (24-bit Depth Encoding ke RGBA8) ---
+      const VS_SHADOW = `
+        attribute vec3 aPos;
+        uniform mat4 uLightViewProj;
+        varying float vDepth;
+        void main() {
+          vec4 clip = uLightViewProj * vec4(aPos, 1.0);
+          vDepth = clip.z * 0.5 + 0.5;
+          gl_Position = clip;
+        }
+      `;
+
+      const FS_SHADOW = PRECISION_HEADER + `
+        varying float vDepth;
+        vec4 packDepth(float d) {
+          const vec4 bitShift = vec4(16777216.0, 65536.0, 256.0, 1.0);
+          const vec4 bitMask  = vec4(0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0);
+          vec4 comp = fract(d * bitShift);
+          comp -= comp.xxyz * bitMask;
+          return comp;
+        }
+        void main() {
+          gl_FragColor = packDepth(clamp(vDepth, 0.0, 1.0));
+        }
+      `;
+
+      // --- B. Vertex Shader Geometri 3D Utama (dengan UV & Shadow Space) ---
+      const VS_3D = `
+        attribute vec3 aPos;
+        attribute vec3 aNormal;
+        attribute vec4 aColor;
+        attribute vec3 aEmissive;
+        attribute vec2 aUV;
+
+        uniform mat4 uViewProj;
+        uniform mat4 uLightViewProj;
+
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        varying vec4 vColor;
+        varying vec3 vEmissive;
+        varying vec2 vUV;
+        varying vec4 vShadowCoord;
+
+        void main() {
+          vWorldPos = aPos;
+          vNormal = aNormal;
+          vColor = aColor;
+          vEmissive = aEmissive;
+          vUV = aUV;
+          vShadowCoord = uLightViewProj * vec4(aPos, 1.0);
+          gl_Position = uViewProj * vec4(aPos, 1.0);
+        }
+      `;
+
+      // --- C. Fungsi Bersama Shadow PCF + Distance Fog + ACES ---
+      const COMMON_GLSL_HELPERS = `
+        float unpackDepth(vec4 rgba) {
+          const vec4 bitShift = vec4(1.0 / 16777216.0, 1.0 / 65536.0, 1.0 / 256.0, 1.0);
+          return dot(rgba, bitShift);
+        }
+
+        float computePCFShadow(sampler2D shadowMap, vec4 shadowCoord, float texelSize, float enabled, float ndl) {
+          if (enabled < 0.5) return 1.0;
+          vec3 proj = shadowCoord.xyz / max(shadowCoord.w, 0.0001);
+          proj = proj * 0.5 + 0.5;
+          if (proj.x < 0.005 || proj.x > 0.995 || proj.y < 0.005 || proj.y > 0.995 || proj.z > 1.0) {
+            return 1.0;
+          }
+          float bias = max(0.0018 * (1.0 - ndl), 0.0007);
+          float sum = 0.0;
+          for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+              vec2 uv = proj.xy + vec2(float(x), float(y)) * texelSize;
+              float mapDepth = unpackDepth(texture2D(shadowMap, uv));
+              sum += (proj.z - bias > mapDepth) ? 0.0 : 1.0;
+            }
+          }
+          return sum / 9.0;
+        }
+
+        vec3 acesFilm(vec3 x) {
+          float a = 2.51;
+          float b = 0.03;
+          float c = 2.43;
+          float d = 0.59;
+          float e = 0.14;
+          return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+        }
+
+        // Kabut atmosfer + Render Distance Fog halus di cakrawala
+        float computeAtmosphericFog(float dist, float fogDensity, float renderDist) {
+          float expFog = 1.0 - exp(-fogDensity * fogDensity * dist * dist);
+          float distStart = renderDist * 0.56;
+          float distFog = smoothstep(distStart, renderDist * 0.98, dist);
+          return clamp(max(expFog, distFog * 0.92), 0.0, 1.0);
+        }
+      `;
+
+      // --- D. Fragment Shader Opaque RTX (Tekstur HD + PCF Shadow + 16 Cahaya + All-Day RTX) ---
+      const FS_MAIN = PRECISION_HEADER + `
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        varying vec4 vColor;
+        varying vec3 vEmissive;
+        varying vec2 vUV;
+        varying vec4 vShadowCoord;
+
+        uniform sampler2D uDetailAtlas;
+        uniform sampler2D uShadowMap;
+        uniform float uShadowTexel;
+        uniform float uShadowsEnabled;
+
+        uniform vec3 uCamPos;
+        uniform float uClipRefl;
+        uniform float uDirectOutput;
+        uniform float uBrightness;
+        uniform float uRenderDist;
+
+        uniform vec3 uSunDir;
+        uniform vec3 uSunColor;
+        uniform vec3 uAmbientSky;
+        uniform vec3 uAmbientGround;
+        uniform vec3 uSkyHorizon;
+        uniform vec3 uSkyTop;
+        uniform float uFogDensity;
+        uniform float uLightning;
+
+        uniform vec4 uLightPos[${MAX_LIGHTS}];
+        uniform vec4 uLightColor[${MAX_LIGHTS}];
+        uniform vec4 uLightDir[${MAX_LIGHTS}];
+      ` + COMMON_GLSL_HELPERS + `
+        void main() {
+          if (uClipRefl > 0.5 && vWorldPos.y < 0.015) {
+            discard;
+          }
+
+          vec3 N = normalize(vNormal);
+          vec3 V = normalize(uCamPos - vWorldPos);
+
+          // Sampel Tekstur Detail HD 1024x1024
+          vec3 texDetail = texture2D(uDetailAtlas, vUV).rgb;
+          vec3 albedo = vColor.rgb * mix(vec3(1.0), texDetail * 1.12, 0.65);
+          float metalGloss = vColor.a;
+          float specPower = mix(16.0, 96.0, metalGloss);
+
+          // Pencahayaan Global Pantulan Langit & Tanah (Hemisphere GI)
+          float hemi = N.y * 0.5 + 0.5;
+          vec3 ambient = mix(uAmbientGround, uAmbientSky, hemi) * albedo;
+
+          // Cahaya Matahari / Bulan + PCF Soft Shadow Real-Time (termasuk Player Shadow!)
+          vec3 Lsun = normalize(-uSunDir);
+          float NdotL = max(dot(N, Lsun), 0.0);
+          float shadow = computePCFShadow(uShadowMap, vShadowCoord, uShadowTexel, uShadowsEnabled, NdotL);
+          // Jaga agar sisi dalam bayangan tetap memiliki pantulan GI lembut dan tidak hitam mati
+          float shadowVis = mix(0.28, 1.0, shadow);
+
+          vec3 Hsun = normalize(Lsun + V);
+          float fresnel = pow(1.0 - max(dot(N, V), 0.0), 4.0);
+          float specSun = pow(max(dot(N, Hsun), 0.0), specPower) * (0.22 + metalGloss * 0.85);
+          vec3 envBounce = mix(uAmbientGround, uSkyHorizon, hemi) * fresnel * metalGloss * 0.55;
+
+          vec3 lit = ambient + envBounce
+            + (albedo * NdotL + vec3(specSun)) * (uSunColor * shadowVis + vec3(uLightning * 1.35));
+
+          // 16 Sumber Cahaya RTX Real-Time (Smooth Inverse-Square Windowing agar merata & rapi)
+          for (int i = 0; i < ${MAX_LIGHTS}; i++) {
+            float range = uLightPos[i].w;
+            if (range > 0.01) {
+              vec3 toLight = uLightPos[i].xyz - vWorldPos;
+              float dist = length(toLight);
+              if (dist < range) {
+                vec3 L = toLight / max(dist, 0.001);
+                float ndl = max(dot(N, L), 0.0);
+                float ratio = dist / range;
+                float win = clamp(1.0 - ratio * ratio * ratio * ratio, 0.0, 1.0);
+                float falloff = (win * win) / (1.0 + dist * dist * 0.08);
+
+                float spotFactor = 1.0;
+                float cutoff = uLightColor[i].w;
+                if (cutoff > 0.001) {
+                  float cosTheta = dot(-L, normalize(uLightDir[i].xyz));
+                  if (cosTheta < cutoff) {
+                    spotFactor = 0.0;
+                  } else {
+                    spotFactor = pow((cosTheta - cutoff) / max(1.0 - cutoff, 0.001), uLightDir[i].w);
+                  }
+                }
+
+                if (spotFactor > 0.001) {
+                  vec3 H = normalize(L + V);
+                  float spec = pow(max(dot(N, H), 0.0), specPower) * (0.4 + metalGloss * 0.6);
+                  lit += (albedo * ndl + vec3(spec)) * uLightColor[i].rgb * falloff * spotFactor;
+                }
+              }
+            }
+          }
+
+          lit += vEmissive;
+
+          float camDist = length(uCamPos - vWorldPos);
+          float fogFactor = computeAtmosphericFog(camDist, uFogDensity, uRenderDist);
+          vec3 fogColor = mix(uSkyHorizon, uSkyTop, 0.24) + vec3(uLightning * 0.45);
+          vec3 finalCol = mix(lit, fogColor, fogFactor);
+
+          if (uDirectOutput > 0.5) {
+            finalCol = acesFilm(finalCol * uBrightness);
+            finalCol = pow(finalCol, vec3(1.0 / 2.2));
+            gl_FragColor = vec4(finalCol, 1.0);
+          } else {
+            gl_FragColor = vec4(clamp(finalCol * 0.5, 0.0, 1.0), 1.0);
+          }
+        }
+      `;
+
+      // --- E. Fragment Shader Permukaan Reflektif (Refleksi Rapi Multi-Tap + Shadow + All-Day RTX) ---
+      const FS_REFLECTIVE = PRECISION_HEADER + `
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        varying vec4 vColor;
+        varying vec3 vEmissive;
+        varying vec2 vUV;
+        varying vec4 vShadowCoord;
+
+        uniform sampler2D uDetailAtlas;
+        uniform sampler2D uShadowMap;
+        uniform float uShadowTexel;
+        uniform float uShadowsEnabled;
+
+        uniform vec3 uCamPos;
+        uniform mat4 uReflViewProj;
+        uniform sampler2D uReflectionTex;
+        uniform float uHasReflection;
+        uniform float uWetness;
+        uniform float uTime;
+        uniform float uWindSpeed;
+        uniform float uDirectOutput;
+        uniform float uBrightness;
+        uniform float uRenderDist;
+
+        uniform vec3 uSunDir;
+        uniform vec3 uSunColor;
+        uniform vec3 uAmbientSky;
+        uniform vec3 uAmbientGround;
+        uniform vec3 uSkyHorizon;
+        uniform vec3 uSkyTop;
+        uniform float uFogDensity;
+        uniform float uLightning;
+
+        uniform vec4 uLightPos[${MAX_LIGHTS}];
+        uniform vec4 uLightColor[${MAX_LIGHTS}];
+        uniform vec4 uLightDir[${MAX_LIGHTS}];
+      ` + COMMON_GLSL_HELPERS + `
+        float hash21(vec2 p) {
+          p = fract(p * vec2(123.34, 456.21));
+          p += dot(p, p + 45.32);
+          return fract(p.x * p.y);
+        }
+
+        float valueNoise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          float a = hash21(i);
+          float b = hash21(i + vec2(1.0, 0.0));
+          float c = hash21(i + vec2(0.0, 1.0));
+          float d = hash21(i + vec2(1.0, 1.0));
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+
+        void main() {
+          bool isWater = (vColor.a > 0.5);
+          vec2 xz = vWorldPos.xz;
+
+          // Riak halus & merata (bebas artefak bergerigi)
+          float rippleFreq = isWater ? 2.1 : 4.2;
+          float rippleAmp = isWater ? (0.011 + uWindSpeed * 0.00032) : (0.0025 * uWetness);
+          float w1 = sin(xz.x * rippleFreq + uTime * 2.8) * cos(xz.y * (rippleFreq * 0.85) - uTime * 2.2);
+          float w2 = cos((xz.x - xz.y) * (rippleFreq * 1.3) + uTime * 3.8);
+          vec2 rippleOffset = vec2(w1, w2) * rippleAmp;
+
+          vec3 N = normalize(vec3(rippleOffset.x * 3.2, 1.0, rippleOffset.y * 3.2));
+          vec3 V = normalize(uCamPos - vWorldPos);
+
+          // Masker genangan hujan yang organik dan halus
+          float puddleMask = 0.0;
+          if (!isWater) {
+            float n1 = valueNoise(xz * 0.42);
+            float n2 = valueNoise(xz * 1.18 + vec2(7.3, 2.9));
+            float puddleVal = n1 * 0.65 + n2 * 0.35;
+            float threshold = mix(0.80, 0.20, clamp(uWetness, 0.0, 1.0));
+            puddleMask = smoothstep(threshold - 0.16, threshold + 0.16, puddleVal);
+          }
+
+          float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.4);
+          // Refleksi RTX aktif secara elegan baik saat cerah (kilau aspal/sungai) maupun hujan
+          float reflStrength = isWater
+            ? clamp(0.48 + fresnel * 0.48, 0.0, 0.95)
+            : clamp((0.12 + puddleMask * 0.76) * (0.32 + uWetness * 0.88) * (0.38 + fresnel * 0.62), 0.0, 0.90);
+
+          // Multi-tap Roughness-Filtered Planar Reflection (menghasilkan pantulan rapi & rata!)
+          vec3 reflColor = mix(uSkyHorizon, uSkyTop, 0.35);
+          if (uHasReflection > 0.5) {
+            vec4 reflClip = uReflViewProj * vec4(vWorldPos.x, 0.02, vWorldPos.z, 1.0);
+            vec2 baseUV = (reflClip.xy / max(reflClip.w, 0.0001)) * 0.5 + 0.5 + rippleOffset;
+            float blurRadius = isWater ? 0.0018 : mix(0.0065, 0.0016, puddleMask * uWetness);
+
+            vec3 rSum = texture2D(uReflectionTex, clamp(baseUV, vec2(0.003), vec2(0.997))).rgb * 0.40;
+            rSum += texture2D(uReflectionTex, clamp(baseUV + vec2(blurRadius, 0.0), vec2(0.003), vec2(0.997))).rgb * 0.15;
+            rSum += texture2D(uReflectionTex, clamp(baseUV - vec2(blurRadius, 0.0), vec2(0.003), vec2(0.997))).rgb * 0.15;
+            rSum += texture2D(uReflectionTex, clamp(baseUV + vec2(0.0, blurRadius), vec2(0.003), vec2(0.997))).rgb * 0.15;
+            rSum += texture2D(uReflectionTex, clamp(baseUV - vec2(0.0, blurRadius), vec2(0.003), vec2(0.997))).rgb * 0.15;
+            reflColor = rSum * 2.0; // Decode Soft-HDR
+          }
+
+          vec3 texDetail = texture2D(uDetailAtlas, vUV).rgb;
+          vec3 albedo = vColor.rgb * mix(vec3(1.0), texDetail * 1.1, isWater ? 0.35 : 0.72);
+          if (!isWater) {
+            albedo *= mix(1.0, 0.54, clamp(uWetness * 0.68 + puddleMask * 0.48, 0.0, 1.0));
+          }
+
+          vec3 Lsun = normalize(-uSunDir);
+          float NdotL = max(dot(N, Lsun), 0.0);
+          float shadow = computePCFShadow(uShadowMap, vShadowCoord, uShadowTexel, uShadowsEnabled, NdotL);
+          float shadowVis = mix(0.32, 1.0, shadow);
+
+          float specPower = isWater ? 110.0 : mix(28.0, 136.0, clamp(puddleMask * uWetness * 1.4, 0.0, 1.0));
+          vec3 ambient = mix(uAmbientGround, uAmbientSky, 0.68) * albedo;
+          vec3 Hsun = normalize(Lsun + V);
+          float specSun = pow(max(dot(N, Hsun), 0.0), specPower) * (0.35 + reflStrength * 1.1);
+          vec3 lit = ambient + (albedo * NdotL + vec3(specSun)) * (uSunColor * shadowVis + vec3(uLightning * 1.35));
+
+          for (int i = 0; i < ${MAX_LIGHTS}; i++) {
+            float range = uLightPos[i].w;
+            if (range > 0.01) {
+              vec3 toLight = uLightPos[i].xyz - vWorldPos;
+              float dist = length(toLight);
+              if (dist < range) {
+                vec3 L = toLight / max(dist, 0.001);
+                float ndl = max(dot(N, L), 0.0);
+                float ratio = dist / range;
+                float win = clamp(1.0 - ratio * ratio * ratio * ratio, 0.0, 1.0);
+                float falloff = (win * win) / (1.0 + dist * dist * 0.08);
+
+                float spotFactor = 1.0;
+                float cutoff = uLightColor[i].w;
+                if (cutoff > 0.001) {
+                  float cosTheta = dot(-L, normalize(uLightDir[i].xyz));
+                  if (cosTheta < cutoff) {
+                    spotFactor = 0.0;
+                  } else {
+                    spotFactor = pow((cosTheta - cutoff) / max(1.0 - cutoff, 0.001), uLightDir[i].w);
+                  }
+                }
+
+                if (spotFactor > 0.001) {
+                  vec3 H = normalize(L + V);
+                  float spec = pow(max(dot(N, H), 0.0), specPower) * (0.55 + reflStrength * 1.35);
+                  lit += (albedo * ndl * 0.85 + vec3(spec)) * uLightColor[i].rgb * falloff * spotFactor;
+                }
+              }
+            }
+          }
+
+          vec3 reflTint = isWater ? vec3(0.80, 0.92, 0.99) : vec3(0.96);
+          vec3 surfaceCol = mix(lit, reflColor * reflTint, reflStrength) + vEmissive;
+
+          float camDist = length(uCamPos - vWorldPos);
+          float fogFactor = computeAtmosphericFog(camDist, uFogDensity, uRenderDist);
+          vec3 fogColor = mix(uSkyHorizon, uSkyTop, 0.24) + vec3(uLightning * 0.45);
+          vec3 finalCol = mix(surfaceCol, fogColor, fogFactor);
+
+          if (uDirectOutput > 0.5) {
+            finalCol = acesFilm(finalCol * uBrightness);
+            finalCol = pow(finalCol, vec3(1.0 / 2.2));
+            gl_FragColor = vec4(finalCol, 1.0);
+          } else {
+            gl_FragColor = vec4(clamp(finalCol * 0.5, 0.0, 1.0), 1.0);
+          }
+        }
+      `;
+
+      // --- F. Post-Processing Shaders (Bloom + DLSS Contrast Adaptive Sharpening + ACES) ---
+      const VS_QUAD = `
+        attribute vec2 aQuadPos;
+        varying vec2 vUV;
+        void main() {
+          vUV = aQuadPos * 0.5 + 0.5;
+          gl_Position = vec4(aQuadPos, 0.0, 1.0);
+        }
+      `;
+
+      const FS_BRIGHT = PRECISION_HEADER + `
+        varying vec2 vUV;
+        uniform sampler2D uSceneTex;
+        uniform float uThreshold;
+        void main() {
+          vec3 col = texture2D(uSceneTex, vUV).rgb * 2.0;
+          float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+          float knee = max(luma - uThreshold, 0.0);
+          float contrib = knee / max(luma, 0.0001);
+          gl_FragColor = vec4(clamp(col * contrib * 0.5, 0.0, 1.0), 1.0);
+        }
+      `;
+
+      const FS_BLUR = PRECISION_HEADER + `
+        varying vec2 vUV;
+        uniform sampler2D uTex;
+        uniform vec2 uTexelOffset;
+        void main() {
+          vec3 sum = texture2D(uTex, vUV).rgb * 0.227027;
+          sum += texture2D(uTex, clamp(vUV + uTexelOffset * 1.384615, vec2(0.001), vec2(0.999))).rgb * 0.316216;
+          sum += texture2D(uTex, clamp(vUV - uTexelOffset * 1.384615, vec2(0.001), vec2(0.999))).rgb * 0.316216;
+          sum += texture2D(uTex, clamp(vUV + uTexelOffset * 3.230769, vec2(0.001), vec2(0.999))).rgb * 0.070270;
+          sum += texture2D(uTex, clamp(vUV - uTexelOffset * 3.230769, vec2(0.001), vec2(0.999))).rgb * 0.070270;
+          gl_FragColor = vec4(sum, 1.0);
+        }
+      `;
+
+      const FS_COMPOSITE_DLSS = PRECISION_HEADER + `
+        varying vec2 vUV;
+        uniform sampler2D uSceneTex;
+        uniform sampler2D uBloomTex;
+        uniform vec2 uSceneTexel;
+        uniform float uDlssActive;
+        uniform float uDlssSharpen;
+        uniform float uBloomEnabled;
+        uniform float uBloomStrength;
+        uniform float uBrightness;
+
+        vec3 acesFilm(vec3 x) {
+          float a = 2.51;
+          float b = 0.03;
+          float c = 2.43;
+          float d = 0.59;
+          float e = 0.14;
+          return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+        }
+
+        // DLSS-style Contrast Adaptive Sharpening (CAS) & Subpixel Edge Reconstruction
+        vec3 dlssReconstruct(sampler2D tex, vec2 uv, vec2 texel, float sharp) {
+          vec3 c = texture2D(tex, uv).rgb * 2.0;
+          if (sharp <= 0.001) return c;
+
+          vec3 n = texture2D(tex, clamp(uv + vec2(0.0, -texel.y), vec2(0.001), vec2(0.999))).rgb * 2.0;
+          vec3 s = texture2D(tex, clamp(uv + vec2(0.0,  texel.y), vec2(0.001), vec2(0.999))).rgb * 2.0;
+          vec3 e = texture2D(tex, clamp(uv + vec2( texel.x, 0.0), vec2(0.001), vec2(0.999))).rgb * 2.0;
+          vec3 w = texture2D(tex, clamp(uv + vec2(-texel.x, 0.0), vec2(0.001), vec2(0.999))).rgb * 2.0;
+
+          vec3 minRGB = min(c, min(min(n, s), min(e, w)));
+          vec3 maxRGB = max(c, max(max(n, s), max(e, w)));
+
+          // Hitung bobot adaptif lokal agar tepi tajam tanpa ringing berlebih
+          vec3 amp = clamp(min(minRGB, 2.0 - maxRGB) / max(maxRGB, vec3(0.001)), 0.0, 1.0);
+          amp = sqrt(amp);
+          vec3 weight = -amp * mix(0.0, 0.22, sharp);
+
+          vec3 reconstructed = (c + (n + s + e + w) * weight) / (1.0 + 4.0 * weight);
+          return clamp(reconstructed, minRGB * 0.92, maxRGB * 1.08);
+        }
+
+        void main() {
+          float sharpAmount = (uDlssActive > 0.5) ? uDlssSharpen : (uDlssSharpen * 0.28);
+          vec3 hdr = dlssReconstruct(uSceneTex, vUV, uSceneTexel, sharpAmount);
+
+          if (uBloomEnabled > 0.5) {
+            vec3 bloom = texture2D(uBloomTex, vUV).rgb * 2.0;
+            hdr += bloom * uBloomStrength;
+          }
+
+          vec3 mapped = acesFilm(hdr * uBrightness);
+
+          // Vignette sinematik ringan
+          vec2 d = vUV - 0.5;
+          mapped *= clamp(1.0 - dot(d, d) * 0.28, 0.68, 1.0);
+
+          mapped = pow(mapped, vec3(1.0 / 2.2));
+          gl_FragColor = vec4(mapped, 1.0);
+        }
+      `;
+
+      function compileShader(type, src) {
+        const sh = gl.createShader(type);
+        gl.shaderSource(sh, src);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+          console.error('Shader compile error:', gl.getShaderInfoLog(sh));
+          gl.deleteShader(sh);
+          return null;
+        }
+        return sh;
+      }
+
+      function createProgram(vsSrc, fsSrc) {
+        const vs = compileShader(gl.VERTEX_SHADER, vsSrc);
+        const fs = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+        if (!vs || !fs) return null;
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          console.error('Program link error:', gl.getProgramInfoLog(prog));
+          gl.deleteProgram(prog);
+          return null;
+        }
+        return prog;
+      }
+
+      const progShadow = createProgram(VS_SHADOW, FS_SHADOW);
+      const progMain = createProgram(VS_3D, FS_MAIN);
+      const progRefl = createProgram(VS_3D, FS_REFLECTIVE);
+      const progBright = createProgram(VS_QUAD, FS_BRIGHT);
+      const progBlur = createProgram(VS_QUAD, FS_BLUR);
+      const progComp = createProgram(VS_QUAD, FS_COMPOSITE_DLSS);
+
+      if (!progMain || !progRefl) {
+        document.getElementById('webgl-error-box').classList.remove('hidden');
+        return;
+      }
+
+      const locShadow = progShadow ? {
+        aPos: gl.getAttribLocation(progShadow, 'aPos'),
+        uLightViewProj: gl.getUniformLocation(progShadow, 'uLightViewProj')
+      } : null;
+
+      function get3DLocs(prog) {
+        return {
+          aPos: gl.getAttribLocation(prog, 'aPos'),
+          aNormal: gl.getAttribLocation(prog, 'aNormal'),
+          aColor: gl.getAttribLocation(prog, 'aColor'),
+          aEmissive: gl.getAttribLocation(prog, 'aEmissive'),
+          aUV: gl.getAttribLocation(prog, 'aUV'),
+
+          uViewProj: gl.getUniformLocation(prog, 'uViewProj'),
+          uLightViewProj: gl.getUniformLocation(prog, 'uLightViewProj'),
+          uDetailAtlas: gl.getUniformLocation(prog, 'uDetailAtlas'),
+          uShadowMap: gl.getUniformLocation(prog, 'uShadowMap'),
+          uShadowTexel: gl.getUniformLocation(prog, 'uShadowTexel'),
+          uShadowsEnabled: gl.getUniformLocation(prog, 'uShadowsEnabled'),
+
+          uCamPos: gl.getUniformLocation(prog, 'uCamPos'),
+          uClipRefl: gl.getUniformLocation(prog, 'uClipRefl'),
+          uDirectOutput: gl.getUniformLocation(prog, 'uDirectOutput'),
+          uBrightness: gl.getUniformLocation(prog, 'uBrightness'),
+          uRenderDist: gl.getUniformLocation(prog, 'uRenderDist'),
+
+          uSunDir: gl.getUniformLocation(prog, 'uSunDir'),
+          uSunColor: gl.getUniformLocation(prog, 'uSunColor'),
+          uAmbientSky: gl.getUniformLocation(prog, 'uAmbientSky'),
+          uAmbientGround: gl.getUniformLocation(prog, 'uAmbientGround'),
+          uSkyHorizon: gl.getUniformLocation(prog, 'uSkyHorizon'),
+          uSkyTop: gl.getUniformLocation(prog, 'uSkyTop'),
+          uFogDensity: gl.getUniformLocation(prog, 'uFogDensity'),
+          uLightning: gl.getUniformLocation(prog, 'uLightning'),
+
+          uLightPos: gl.getUniformLocation(prog, 'uLightPos'),
+          uLightColor: gl.getUniformLocation(prog, 'uLightColor'),
+          uLightDir: gl.getUniformLocation(prog, 'uLightDir'),
+
+          uReflViewProj: gl.getUniformLocation(prog, 'uReflViewProj'),
+          uReflectionTex: gl.getUniformLocation(prog, 'uReflectionTex'),
+          uHasReflection: gl.getUniformLocation(prog, 'uHasReflection'),
+          uWetness: gl.getUniformLocation(prog, 'uWetness'),
+          uTime: gl.getUniformLocation(prog, 'uTime'),
+          uWindSpeed: gl.getUniformLocation(prog, 'uWindSpeed')
+        };
+      }
+
+      const locMain = get3DLocs(progMain);
+      const locRefl = get3DLocs(progRefl);
+
+      const locBright = progBright ? {
+        aQuadPos: gl.getAttribLocation(progBright, 'aQuadPos'),
+        uSceneTex: gl.getUniformLocation(progBright, 'uSceneTex'),
+        uThreshold: gl.getUniformLocation(progBright, 'uThreshold')
+      } : null;
+
+      const locBlur = progBlur ? {
+        aQuadPos: gl.getAttribLocation(progBlur, 'aQuadPos'),
+        uTex: gl.getUniformLocation(progBlur, 'uTex'),
+        uTexelOffset: gl.getUniformLocation(progBlur, 'uTexelOffset')
+      } : null;
+
+      const locComp = progComp ? {
+        aQuadPos: gl.getAttribLocation(progComp, 'aQuadPos'),
+        uSceneTex: gl.getUniformLocation(progComp, 'uSceneTex'),
+        uBloomTex: gl.getUniformLocation(progComp, 'uBloomTex'),
+        uSceneTexel: gl.getUniformLocation(progComp, 'uSceneTexel'),
+        uDlssActive: gl.getUniformLocation(progComp, 'uDlssActive'),
+        uDlssSharpen: gl.getUniformLocation(progComp, 'uDlssSharpen'),
+        uBloomEnabled: gl.getUniformLocation(progComp, 'uBloomEnabled'),
+        uBloomStrength: gl.getUniformLocation(progComp, 'uBloomStrength'),
+        uBrightness: gl.getUniformLocation(progComp, 'uBrightness')
+      } : null;
+
+      const quadVBO = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadVBO);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+      // =======================================================================
+      // 6. FRAMEBUFFER (SHADOW MAP + REFLEKSI PLANAR + SCENE DLSS + BLOOM)
+      // =======================================================================
+      function createFBO(w, h, withDepth, nearestFilter = false) {
+        const fbo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        const filter = nearestFilter ? gl.NEAREST : gl.LINEAR;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+        let depthRb = null;
+        if (withDepth) {
+          depthRb = gl.createRenderbuffer();
+          gl.bindRenderbuffer(gl.RENDERBUFFER, depthRb);
+          gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+          gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthRb);
+        }
+
+        const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        if (!complete) {
+          gl.deleteTexture(tex);
+          if (depthRb) gl.deleteRenderbuffer(depthRb);
+          gl.deleteFramebuffer(fbo);
+          return null;
+        }
+        return { fbo, tex, depthRb, w, h };
+      }
+
+      function destroyFBO(target) {
+        if (!target) return;
+        gl.deleteTexture(target.tex);
+        if (target.depthRb) gl.deleteRenderbuffer(target.depthRb);
+        gl.deleteFramebuffer(target.fbo);
+      }
+
+      const SHADOW_RES = ('ontouchstart' in window) ? 1024 : 1536;
+      const shadowFBO = progShadow ? createFBO(SHADOW_RES, SHADOW_RES, true, true) : null;
+      const canShadow = Boolean(shadowFBO);
+
+      let outputW = 1280;
+      let outputH = 720;
+      let internalW = 960;
+      let internalH = 540;
+      let reflFBO = null;
+      let sceneFBO = null;
+      let bloomFBO_A = null;
+      let bloomFBO_B = null;
+      let canPostProcess = false;
+      let canReflect = false;
+
+      function rebuildRenderTargets() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const cssW = Math.max(320, window.innerWidth);
+        const cssH = Math.max(240, window.innerHeight);
+
+        outputW = Math.min(2560, Math.round(cssW * dpr * rtxConfig.resolutionScale));
+        outputH = Math.min(2560, Math.round(cssH * dpr * rtxConfig.resolutionScale));
+
+        const dlssPreset = DLSS_PRESETS[rtxConfig.dlssMode] || DLSS_PRESETS.quality;
+        internalW = Math.max(320, Math.round(outputW * dlssPreset.scale));
+        internalH = Math.max(240, Math.round(outputH * dlssPreset.scale));
+
+        canvas.width = outputW;
+        canvas.height = outputH;
+
+        destroyFBO(reflFBO);
+        destroyFBO(sceneFBO);
+        destroyFBO(bloomFBO_A);
+        destroyFBO(bloomFBO_B);
+
+        const rw = Math.max(160, Math.floor(internalW * 0.55));
+        const rh = Math.max(120, Math.floor(internalH * 0.55));
+        const bw = Math.max(80, Math.floor(internalW * 0.28));
+        const bh = Math.max(64, Math.floor(internalH * 0.28));
+
+        reflFBO = createFBO(rw, rh, true, false);
+        canReflect = Boolean(reflFBO);
+
+        if (progBright && progBlur && progComp) {
+          sceneFBO = createFBO(internalW, internalH, true, false);
+          bloomFBO_A = createFBO(bw, bh, false, false);
+          bloomFBO_B = createFBO(bw, bh, false, false);
+          canPostProcess = Boolean(sceneFBO && bloomFBO_A && bloomFBO_B);
+        } else {
+          canPostProcess = false;
+        }
+      }
+
+      // =======================================================================
+      // 7. PEMBANGUN GEOMETRI VOXEL BATCHED DENGAN UV TEKSTUR HD (15 FLOAT/VERT)
+      // =======================================================================
+      // ID Ubin Tekstur Atlas 1024x1024:
+      // 0: Pohon & Daun | 1: Kendaraan & Logam | 2: Aspal & Rumput | 3: Kayu, Rel & Air
+      const TILE_UV = [
+        [0.02, 0.02, 0.48, 0.48], // 0: Tree & Foliage
+        [0.52, 0.02, 0.98, 0.48], // 1: Vehicle & Metal
+        [0.02, 0.52, 0.48, 0.98], // 2: Asphalt & Grass
+        [0.52, 0.52, 0.98, 0.98]  // 3: Wood, Rail & Water
+      ];
+
+      class VoxelBatch {
+        constructor() {
+          this.chunks = [];
+          this.cur = null;
+          this.reset();
+        }
+
+        reset() {
+          this.chunks.length = 0;
+          this._newChunk();
+        }
+
+        _newChunk() {
+          this.cur = {
+            verts: [],
+            indices: [],
+            vCount: 0
+          };
+          this.chunks.push(this.cur);
+        }
+
+        addBox(cx, cy, cz, sx, sy, sz, r, g, b, shininess = 0.2, er = 0, eg = 0, eb = 0, tileId = 2) {
+          if (this.cur.vCount + 24 >= MAX_BATCH_VERTS) {
+            this._newChunk();
+          }
+          const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+          const x0 = cx - hx, x1 = cx + hx;
+          const y0 = cy - hy, y1 = cy + hy;
+          const z0 = cz - hz, z1 = cz + hz;
+
+          const [u0, v0, u1, v1] = TILE_UV[tileId] || TILE_UV[2];
+          const v = this.cur.verts;
+          const idx = this.cur.indices;
+          let base = this.cur.vCount;
+
+          const faces = [
+            [0, 1, 0,  x0, y1, z1,  x1, y1, z1,  x1, y1, z0,  x0, y1, z0, 1.00],
+            [0, -1, 0, x0, y0, z0,  x1, y0, z0,  x1, y0, z1,  x0, y0, z1, 0.72],
+            [0, 0, 1,  x0, y0, z1,  x1, y0, z1,  x1, y1, z1,  x0, y1, z1, 0.92],
+            [0, 0, -1, x1, y0, z0,  x0, y0, z0,  x0, y1, z0,  x1, y1, z0, 0.88],
+            [1, 0, 0,  x1, y0, z1,  x1, y0, z0,  x1, y1, z0,  x1, y1, z1, 0.90],
+            [-1, 0, 0, x0, y0, z0,  x0, y0, z1,  x0, y1, z1,  x0, y1, z0, 0.86]
+          ];
+          const uvs = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+
+          for (let f = 0; f < 6; f++) {
+            const fd = faces[f];
+            const nx = fd[0], ny = fd[1], nz = fd[2];
+            const shade = fd[15];
+            const cr = r * shade, cg = g * shade, cb = b * shade;
+
+            for (let p = 0; p < 4; p++) {
+              const o = 3 + p * 3;
+              v.push(
+                fd[o], fd[o + 1], fd[o + 2],
+                nx, ny, nz,
+                cr, cg, cb, shininess,
+                er, eg, eb,
+                uvs[p][0], uvs[p][1]
+              );
+            }
+            idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+            base += 4;
+          }
+          this.cur.vCount = base;
+        }
+
+        // Balok dengan rotasi Y (untuk tubuh pemain First-Person & koin berputar)
+        addBoxRotY(cx, cy, cz, sx, sy, sz, angleY, r, g, b, shininess = 0.2, er = 0, eg = 0, eb = 0, tileId = 1) {
+          if (this.cur.vCount + 24 >= MAX_BATCH_VERTS) {
+            this._newChunk();
+          }
+          const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+          const ca = Math.cos(angleY), sa = Math.sin(angleY);
+          const [u0, v0, u1, v1] = TILE_UV[tileId] || TILE_UV[1];
+
+          const v = this.cur.verts;
+          const idx = this.cur.indices;
+          let base = this.cur.vCount;
+
+          const localCorners = [
+            [-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz],
+            [-hx, -hy,  hz], [hx, -hy,  hz], [hx, hy,  hz], [-hx, hy,  hz]
+          ];
+          const wc = localCorners.map(([lx, ly, lz]) => [
+            cx + lx * ca + lz * sa,
+            cy + ly,
+            cz - lx * sa + lz * ca
+          ]);
+
+          const quads = [
+            [7, 6, 2, 3,  0,  1,  0, 1.00],
+            [0, 1, 5, 4,  0, -1,  0, 0.72],
+            [4, 5, 6, 7,  sa, 0,  ca, 0.92],
+            [1, 0, 3, 2, -sa, 0, -ca, 0.88],
+            [5, 1, 2, 6,  ca, 0, -sa, 0.90],
+            [0, 4, 7, 3, -ca, 0,  sa, 0.86]
+          ];
+          const uvs = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+
+          for (let q = 0; q < 6; q++) {
+            const qd = quads[q];
+            const nx = qd[4], ny = qd[5], nz = qd[6];
+            const shade = qd[7];
+            for (let k = 0; k < 4; k++) {
+              const pt = wc[qd[k]];
+              v.push(
+                pt[0], pt[1], pt[2],
+                nx, ny, nz,
+                r * shade, g * shade, b * shade, shininess,
+                er, eg, eb,
+                uvs[k][0], uvs[k][1]
+              );
+            }
+            idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+            base += 4;
+          }
+          this.cur.vCount = base;
+        }
+      }
+
+      class BatchUploader {
+        constructor() {
+          this.buffers = [];
+        }
+
+        upload(batch) {
+          for (let i = 0; i < batch.chunks.length; i++) {
+            const ch = batch.chunks[i];
+            if (ch.indices.length === 0) continue;
+
+            if (!this.buffers[i]) {
+              this.buffers[i] = {
+                vbo: gl.createBuffer(),
+                ibo: gl.createBuffer(),
+                count: 0
+              };
+            }
+            const gpu = this.buffers[i];
+            gpu.count = ch.indices.length;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, gpu.vbo);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ch.verts), gl.DYNAMIC_DRAW);
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gpu.ibo);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ch.indices), gl.DYNAMIC_DRAW);
+          }
+          for (let i = batch.chunks.length; i < this.buffers.length; i++) {
+            this.buffers[i].count = 0;
+          }
+        }
+
+        drawMain(locs) {
+          const stride = 15 * 4; // 15 float per vertex (60 bytes)
+          for (let i = 0; i < this.buffers.length; i++) {
+            const gpu = this.buffers[i];
+            if (!gpu || gpu.count === 0) continue;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, gpu.vbo);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gpu.ibo);
+
+            gl.enableVertexAttribArray(locs.aPos);
+            gl.vertexAttribPointer(locs.aPos, 3, gl.FLOAT, false, stride, 0);
+
+            gl.enableVertexAttribArray(locs.aNormal);
+            gl.vertexAttribPointer(locs.aNormal, 3, gl.FLOAT, false, stride, 3 * 4);
+
+            gl.enableVertexAttribArray(locs.aColor);
+            gl.vertexAttribPointer(locs.aColor, 4, gl.FLOAT, false, stride, 6 * 4);
+
+            gl.enableVertexAttribArray(locs.aEmissive);
+            gl.vertexAttribPointer(locs.aEmissive, 3, gl.FLOAT, false, stride, 10 * 4);
+
+            gl.enableVertexAttribArray(locs.aUV);
+            gl.vertexAttribPointer(locs.aUV, 2, gl.FLOAT, false, stride, 13 * 4);
+
+            gl.drawElements(gl.TRIANGLES, gpu.count, gl.UNSIGNED_SHORT, 0);
+          }
+        }
+
+        drawShadow(shadowLocs) {
+          const stride = 15 * 4;
+          for (let i = 0; i < this.buffers.length; i++) {
+            const gpu = this.buffers[i];
+            if (!gpu || gpu.count === 0) continue;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, gpu.vbo);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gpu.ibo);
+
+            gl.enableVertexAttribArray(shadowLocs.aPos);
+            gl.vertexAttribPointer(shadowLocs.aPos, 3, gl.FLOAT, false, stride, 0);
+
+            gl.drawElements(gl.TRIANGLES, gpu.count, gl.UNSIGNED_SHORT, 0);
+          }
+        }
+      }
+
+      const opaqueBatch = new VoxelBatch();
+      const reflBatch = new VoxelBatch();
+      const playerBodyBatch = new VoxelBatch();
+      const playerHeadShadowBatch = new VoxelBatch();
+
+      const opaqueUploader = new BatchUploader();
+      const reflUploader = new BatchUploader();
+      const playerBodyUploader = new BatchUploader();
+      const playerHeadShadowUploader = new BatchUploader();
+
+      // =======================================================================
+      // 8. GENERATOR PETA LUAS (±32 PLAYABLE, ±64 VISUAL), POHON ANGIN & TRAFFIC
+      // =======================================================================
+      const lanes = new Map();
+      const solidPoles = [];
+      const dynamicLights = [];
+
+      const rainDrops = [];
+      for (let i = 0; i < 480; i++) {
+        rainDrops.push({
+          x: (Math.random() - 0.5) * 64,
+          y: Math.random() * 16,
+          z: (Math.random() - 0.5) * 64,
+          speed: 17 + Math.random() * 7
+        });
+      }
+
+      function createLane(index) {
+        const z = -index * LANE_WIDTH;
+        let type = 'grass';
+
+        if (index <= 2) {
+          type = 'grass';
+        } else {
+          const prev1 = lanes.get(index - 1)?.type || 'grass';
+          const prev2 = lanes.get(index - 2)?.type || 'grass';
+          const r = Math.random();
+
+          if (prev1 === 'rail' || prev2 === 'rail') {
+            type = r < 0.5 ? 'grass' : 'road';
+          } else if (prev1 === 'river' && prev2 === 'river') {
+            type = r < 0.65 ? 'grass' : 'road';
+          } else {
+            if (r < 0.30) type = 'grass';
+            else if (r < 0.70) type = 'road';
+            else if (r < 0.88) type = 'river';
+            else type = 'rail';
+          }
+        }
+
+        const lane = {
+          index,
+          z,
+          type,
+          dir: Math.random() < 0.5 ? 1 : -1,
+          obstacles: [],
+          streetlamps: [],
+          vehicles: [],
+          logs: [],
+          lilypads: [],
+          coins: [],
+          train: null,
+          trainTimer: 1.5 + Math.random() * 4.5,
+          trainInterval: Math.max(4.2, 7.6 - Math.min(3.0, index * 0.03)),
+          trainWarning: false,
+          gateAngle: 0
+        };
+
+        const prevLane = lanes.get(index - 1);
+        const nextToRoad = prevLane && prevLane.type === 'road';
+
+        if (type === 'grass') {
+          const occupiedX = new Set();
+          if (index === 0) occupiedX.add(0);
+
+          // 1. Lampu Jalan RTX di sepanjang peta luas (±24, ±12, 0)
+          if (nextToRoad || index === 2) {
+            const lampXs = [-24.0, -12.0, 0.0, 12.0, 24.0];
+            for (let lx of lampXs) {
+              if (index === 0 && Math.abs(lx) < 2) continue;
+              const sideZ = nextToRoad ? z + LANE_WIDTH * 0.36 : z - LANE_WIDTH * 0.36;
+              const armDir = nextToRoad ? 1 : -1;
+              lane.streetlamps.push({
+                x: lx,
+                z: sideZ,
+                armDir,
+                radius: 0.34
+              });
+              occupiedX.add(Math.round(lx));
+            }
+          }
+
+          // 2. Pohon Detail Berlapis & Batu di area peta luas (±31 unit)
+          const count = index <= 1 ? 8 : (10 + Math.floor(Math.random() * 9));
+          for (let i = 0; i < count; i++) {
+            const gx = Math.floor((Math.random() - 0.5) * 62);
+            if (occupiedX.has(gx)) continue;
+            if (index === 0 && Math.abs(gx) <= 2) continue;
+            occupiedX.add(gx);
+
+            const isTree = Math.random() < 0.74;
+            lane.obstacles.push({
+              x: gx,
+              z: z + (Math.random() - 0.5) * 0.65,
+              kind: isTree ? 'tree' : 'rock',
+              radius: isTree ? 0.54 : 0.64,
+              height: isTree ? (3.1 + Math.random() * 1.5) : (0.75 + Math.random() * 0.45),
+              swayPhase: Math.random() * Math.PI * 2,
+              leafHue: (Math.random() - 0.5) * 0.06
+            });
+          }
+
+          // 3. Koin Emas di seluruh lebar peta
+          if (index > 1 && Math.random() < 0.55) {
+            const cx = Math.floor((Math.random() - 0.5) * 44);
+            if (!occupiedX.has(cx)) {
+              lane.coins.push({ x: cx, z, collected: false, phase: Math.random() * 6.28 });
+            }
+          }
+        } else if (type === 'road') {
+          const speed = (5.4 + Math.random() * 5.0 + Math.min(3.2, index * 0.04)) * lane.dir;
+          const count = 4 + Math.floor(Math.random() * 2); // Lebih banyak kendaraan di jalan raya luas
+          const spacing = 74 / count;
+          const palette = [
+            [0.92, 0.22, 0.26],
+            [0.16, 0.58, 0.96],
+            [0.98, 0.76, 0.14],
+            [0.92, 0.94, 0.98],
+            [0.18, 0.82, 0.56],
+            [0.68, 0.34, 0.94]
+          ];
+
+          for (let i = 0; i < count; i++) {
+            const isTruck = Math.random() < 0.28;
+            const col = palette[Math.floor(Math.random() * palette.length)];
+            lane.vehicles.push({
+              x: -37 + i * spacing + Math.random() * 4,
+              z,
+              vx: speed,
+              length: isTruck ? 4.5 : 2.85,
+              width: isTruck ? 1.68 : 1.50,
+              height: isTruck ? 1.88 : 1.20,
+              isTruck,
+              color: col
+            });
+          }
+
+          if (Math.random() < 0.36) {
+            lane.coins.push({
+              x: Math.floor((Math.random() - 0.5) * 38),
+              z,
+              collected: false,
+              phase: Math.random() * 6.28
+            });
+          }
+        } else if (type === 'river') {
+          const isLilyLane = Math.random() < 0.30 && prevLane?.type !== 'river';
+          if (isLilyLane) {
+            for (let lx = -28; lx <= 28; lx += 3) {
+              if (Math.random() < 0.68 || Math.abs(lx) <= 1) {
+                lane.lilypads.push({ x: lx + (Math.random() - 0.5) * 0.5, z, radius: 1.05 });
+              }
+            }
+          } else {
+            const speed = (2.7 + Math.random() * 2.5 + Math.min(1.6, index * 0.02)) * lane.dir;
+            const count = 6;
+            const spacing = 72 / count;
+            for (let i = 0; i < count; i++) {
+              const len = 4.4 + Math.random() * 2.2;
+              lane.logs.push({
+                x: -36 + i * spacing + Math.random() * 3,
+                z,
+                vx: speed,
+                length: len,
+                width: 1.68
+              });
+            }
+          }
+        } else if (type === 'rail') {
+          lane.gatePoles = [
+            { x: -16.5, z: z + 1.15, radius: 0.30 },
+            { x: 0.0,   z: z + 1.15, radius: 0.30 },
+            { x: 16.5,  z: z + 1.15, radius: 0.30 }
+          ];
+        }
+
+        lanes.set(index, lane);
+      }
+
+      function rebuildSolidPolesList() {
+        solidPoles.length = 0;
+        lanes.forEach((lane) => {
+          for (let i = 0; i < lane.streetlamps.length; i++) {
+            const sl = lane.streetlamps[i];
+            solidPoles.push({ x: sl.x, z: sl.z, radius: sl.radius, isMetal: true });
+          }
+          for (let i = 0; i < lane.obstacles.length; i++) {
+            const ob = lane.obstacles[i];
+            solidPoles.push({ x: ob.x, z: ob.z, radius: ob.radius, isMetal: false });
+          }
+          if (lane.gatePoles) {
+            for (let i = 0; i < lane.gatePoles.length; i++) {
+              const gp = lane.gatePoles[i];
+              solidPoles.push({ x: gp.x, z: gp.z, radius: gp.radius, isMetal: true });
+            }
+          }
+        });
+      }
+
+      function ensureLanesAround(centerLane) {
+        const minIdx = Math.max(0, centerLane - LANES_BEHIND);
+        const maxIdx = centerLane + LANES_AHEAD;
+        let changed = false;
+
+        for (let i = minIdx; i <= maxIdx; i++) {
+          if (!lanes.has(i)) {
+            createLane(i);
+            changed = true;
+          }
+        }
+
+        lanes.forEach((_, key) => {
+          if (key < minIdx - 2) {
+            lanes.delete(key);
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          rebuildSolidPolesList();
+        }
+      }
+
+      // =======================================================================
+      // 9. SIKLUS WAKTU (RTX DI SEMUA WAKTU!), CUACA, KABUT & ANGIN
+      // =======================================================================
+      function updateEnvironment(dt) {
+        if (rtxConfig.timeMode === 'auto') {
+          envState.timeCycleClock = (envState.timeCycleClock + dt * 0.0085) % 1.0;
+        } else {
+          const mapTime = { morning: 0.25, day: 0.48, sunset: 0.72, night: 0.90 };
+          envState.timeCycleClock = mapTime[rtxConfig.timeMode] ?? 0.90;
+        }
+
+        const t = envState.timeCycleClock;
+        if (t < 0.20 || t >= 0.80) {
+          envState.currentTimeLabel = 'Malam Gelap RTX';
+          envState.nightFactor = 1.0;
+          envState.sunDir = [0.34, -0.58, -0.45];
+          envState.sunColor = [0.10, 0.14, 0.28]; // Cahaya bulan RTX sehingga Player Shadow & pohon tetap terlihat!
+          envState.skyTop = [0.008, 0.012, 0.032];
+          envState.skyHorizon = [0.02, 0.032, 0.075];
+          envState.ambientSky = [0.035, 0.052, 0.11];
+          envState.ambientGround = [0.018, 0.024, 0.045];
+        } else if (t < 0.34) {
+          envState.currentTimeLabel = 'Pagi Emas RTX';
+          envState.nightFactor = 0.20;
+          envState.sunDir = [0.58, -0.42, -0.45];
+          envState.sunColor = [1.45, 0.96, 0.62];
+          envState.skyTop = [0.22, 0.50, 0.86];
+          envState.skyHorizon = [0.82, 0.64, 0.50];
+          envState.ambientSky = [0.42, 0.48, 0.62];
+          envState.ambientGround = [0.22, 0.19, 0.16];
+        } else if (t < 0.64) {
+          envState.currentTimeLabel = 'Siang Cerah RTX';
+          envState.nightFactor = 0.0;
+          envState.sunDir = [0.28, -0.86, -0.35];
+          envState.sunColor = [1.65, 1.58, 1.48];
+          envState.skyTop = [0.15, 0.52, 0.96];
+          envState.skyHorizon = [0.60, 0.80, 0.98];
+          envState.ambientSky = [0.48, 0.62, 0.78];
+          envState.ambientGround = [0.26, 0.28, 0.24];
+        } else {
+          envState.currentTimeLabel = 'Sore Senja RTX';
+          envState.nightFactor = 0.42;
+          envState.sunDir = [-0.62, -0.34, -0.48];
+          envState.sunColor = [1.55, 0.62, 0.26];
+          envState.skyTop = [0.15, 0.18, 0.42];
+          envState.skyHorizon = [0.88, 0.38, 0.20];
+          envState.ambientSky = [0.36, 0.26, 0.36];
+          envState.ambientGround = [0.18, 0.12, 0.11];
+        }
+
+        // 2. Siklus Cuaca
+        if (rtxConfig.weatherMode === 'auto') {
+          envState.weatherTimer -= dt;
+          if (envState.weatherTimer <= 0) {
+            const states = ['clear', 'cloudy', 'drizzle', 'rain', 'storm'];
+            envState.activeWeather = states[Math.floor(Math.random() * states.length)];
+            envState.weatherTimer = 18 + Math.random() * 18;
+          }
+        } else {
+          envState.activeWeather = rtxConfig.weatherMode;
+        }
+
+        const wMap = {
+          clear:   { label: 'Cerah',       wet: 0.18, rain: 0.0 },
+          cloudy:  { label: 'Mendung',     wet: 0.32, rain: 0.0 },
+          drizzle: { label: 'Gerimis',     wet: 0.72, rain: 0.35 },
+          rain:    { label: 'Hujan Deras', wet: 0.96, rain: 0.85 },
+          storm:   { label: 'Badai Petir', wet: 1.00, rain: 1.00 }
+        };
+        const wPreset = wMap[envState.activeWeather] || wMap.clear;
+        envState.currentWeatherLabel = wPreset.label;
+        envState.targetWetness = wPreset.wet;
+        envState.targetRainIntensity = wPreset.rain;
+
+        envState.wetness = lerp(envState.wetness, envState.targetWetness, dt * 0.45);
+        envState.rainIntensity = lerp(envState.rainIntensity, envState.targetRainIntensity, dt * 0.8);
+
+        if (envState.activeWeather === 'storm' || (envState.activeWeather === 'rain' && Math.random() < 0.2)) {
+          gameState.nextLightningTimer -= dt;
+          if (gameState.nextLightningTimer <= 0) {
+            gameState.lightningFlash = 1.0;
+            gameState.nextLightningTimer = 4.5 + Math.random() * 7.5;
+            sound.playThunder();
+          }
+        }
+        gameState.lightningFlash = Math.max(0, gameState.lightningFlash - dt * 3.8);
+
+        const cloudDim = envState.activeWeather === 'clear' ? 1.0 : 0.68;
+        envState.sunColor = envState.sunColor.map(c => c * cloudDim);
+
+        // 3. Siklus Kabut Dinamis
+        if (rtxConfig.fogMode === 'auto' || rtxConfig.fogMode === 'random') {
+          envState.fogTimer -= dt;
+          if (envState.fogTimer <= 0) {
+            const roll = Math.random();
+            if (roll < 0.35) {
+              envState.activeFog = 'none';
+              envState.currentFogLabel = 'Cerah';
+              envState.targetFogDensity = 0.003;
+            } else if (roll < 0.72) {
+              envState.activeFog = 'light';
+              envState.currentFogLabel = 'Kabut Tipis';
+              envState.targetFogDensity = 0.011;
+            } else {
+              envState.activeFog = 'heavy';
+              envState.currentFogLabel = 'Kabut Tebal';
+              envState.targetFogDensity = 0.026;
+            }
+            envState.fogTimer = rtxConfig.fogMode === 'random'
+              ? (6 + Math.random() * 10)
+              : (14 + Math.random() * 16);
+          }
+          envState.fogDensity = lerp(envState.fogDensity, envState.targetFogDensity, dt * 0.35);
+          rtxConfig.fogManualDensity = envState.fogDensity;
+          const sliderFog = document.getElementById('slider-fog-density');
+          const valFog = document.getElementById('val-fog-density');
+          if (sliderFog && document.activeElement !== sliderFog) {
+            sliderFog.value = envState.fogDensity.toFixed(3);
+            valFog.textContent = envState.fogDensity.toFixed(3);
+          }
+        } else {
+          const fMap = {
+            none:  { label: 'Cerah',       dens: 0.002 },
+            light: { label: 'Kabut Tipis', dens: 0.011 },
+            heavy: { label: 'Kabut Tebal', dens: 0.028 }
+          };
+          const fp = fMap[rtxConfig.fogMode];
+          if (fp) {
+            envState.currentFogLabel = fp.label;
+            envState.fogDensity = lerp(envState.fogDensity, fp.dens, dt * 1.2);
+          } else {
+            envState.fogDensity = rtxConfig.fogManualDensity;
+            envState.currentFogLabel = envState.fogDensity < 0.006 ? 'Cerah' : (envState.fogDensity < 0.018 ? 'Kabut Tipis' : 'Kabut Tebal');
+          }
+        }
+
+        // 4. Siklus Angin Dinamis (Menggerakkan dedaunan & ranting pohon secara real-time)
+        if (rtxConfig.windMode === 'auto') {
+          envState.windTimer -= dt;
+          if (envState.windTimer <= 0) {
+            const wStates = ['calm', 'breeze', 'strong', 'storm'];
+            envState.activeWind = wStates[Math.floor(Math.random() * wStates.length)];
+            envState.windTimer = 15 + Math.random() * 15;
+          }
+        } else {
+          envState.activeWind = rtxConfig.windMode;
+        }
+
+        const windMap = {
+          calm:   { label: 'Tenang',  spd: 4 },
+          breeze: { label: 'Sepoi',   spd: 14 },
+          strong: { label: 'Kencang', spd: 32 },
+          storm:  { label: 'Badai',   spd: 54 }
+        };
+        const wp = windMap[envState.activeWind] || windMap.breeze;
+        envState.currentWindLabel = wp.label;
+        envState.targetWindSpeed = wp.spd;
+        envState.windSpeed = lerp(envState.windSpeed, envState.targetWindSpeed, dt * 0.6);
+        envState.windAngle += Math.sin(gameState.timeElapsed * 0.25) * dt * 0.12;
+
+        sound.setRainVolume(envState.rainIntensity, envState.windSpeed / 54);
+      }
+
+      // =======================================================================
+      // 10. KONTROL INPUT: JOYSTICK, SENTUH LAYAR 360°, TOMBOL & KEYBOARD
+      // =======================================================================
+      const joyState = { x: 0, y: 0, active: false };
+      const keys = {};
+
+      const joystickZone = document.getElementById('joystick-zone');
+      const joystickBase = document.getElementById('joystick-base');
+      const joystickKnob = document.getElementById('joystick-knob');
+      const jumpBtn = document.getElementById('jump-btn');
+      const straightBtn = document.getElementById('straight-btn');
+
+      let joyTouchId = null;
+      let joyMouseActive = false;
+      let lookTouchId = null;
+      let lookMouseActive = false;
+      let lastLookX = 0;
+      let lastLookY = 0;
+
+      function updateJoystickVisual(dx, dy) {
+        const maxR = 42;
+        const dist = Math.hypot(dx, dy);
+        let nx = dx, ny = dy;
+        if (dist > maxR) {
+          nx = (dx / dist) * maxR;
+          ny = (dy / dist) * maxR;
+        }
+        joystickKnob.style.transform = `translate(${nx}px, ${ny}px)`;
+        joyState.x = nx / maxR;
+        joyState.y = ny / maxR;
+        joyState.active = dist > 5;
+        joystickBase.classList.toggle('active', joyState.active);
+      }
+
+      function resetJoystick() {
+        joystickKnob.style.transform = 'translate(0px, 0px)';
+        joyState.x = 0;
+        joyState.y = 0;
+        joyState.active = false;
+        joystickBase.classList.remove('active');
+      }
+
+      joystickZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        sound.init();
+        sound.resume();
+        if (joyTouchId === null && e.changedTouches.length > 0) {
+          const t = e.changedTouches[0];
+          joyTouchId = t.identifier;
+          const r = joystickBase.getBoundingClientRect();
+          updateJoystickVisual(t.clientX - (r.left + r.width * 0.5), t.clientY - (r.top + r.height * 0.5));
+        }
+      }, { passive: false });
+
+      joystickZone.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier === joyTouchId) {
+            const r = joystickBase.getBoundingClientRect();
+            updateJoystickVisual(t.clientX - (r.left + r.width * 0.5), t.clientY - (r.top + r.height * 0.5));
+          }
+        }
+      }, { passive: false });
+
+      function endJoyTouch(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) {
+            joyTouchId = null;
+            resetJoystick();
+          }
+        }
+      }
+      joystickZone.addEventListener('touchend', endJoyTouch);
+      joystickZone.addEventListener('touchcancel', endJoyTouch);
+
+      joystickZone.addEventListener('mousedown', (e) => {
+        sound.init();
+        sound.resume();
+        joyMouseActive = true;
+        const r = joystickBase.getBoundingClientRect();
+        updateJoystickVisual(e.clientX - (r.left + r.width * 0.5), e.clientY - (r.top + r.height * 0.5));
+      });
+
+      canvas.addEventListener('touchstart', (e) => {
+        sound.init();
+        sound.resume();
+        if (lookTouchId === null && e.changedTouches.length > 0) {
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier !== joyTouchId) {
+              lookTouchId = t.identifier;
+              lastLookX = t.clientX;
+              lastLookY = t.clientY;
+              player.targetYaw = null;
+              break;
+            }
+          }
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (gameState.phase !== 'playing') return;
+        const axisSign = rtxConfig.invertCameraAxis ? -1 : 1;
+        const sens = rtxConfig.cameraSensitivity;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier === lookTouchId) {
+            const dx = t.clientX - lastLookX;
+            const dy = t.clientY - lastLookY;
+            lastLookX = t.clientX;
+            lastLookY = t.clientY;
+            player.yaw -= dx * 0.0052 * sens * axisSign;
+            // Izinkan menunduk hingga -1.18 rad agar kaki & tubuh First-Person terlihat jelas!
+            player.pitch = clamp(player.pitch - dy * 0.0044 * sens * axisSign, -1.18, 0.88);
+          }
+        }
+      }, { passive: true });
+
+      function endLookTouch(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === lookTouchId) {
+            lookTouchId = null;
+          }
+        }
+      }
+      canvas.addEventListener('touchend', endLookTouch);
+      canvas.addEventListener('touchcancel', endLookTouch);
+
+      canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 0 && gameState.phase === 'playing') {
+          sound.init();
+          sound.resume();
+          lookMouseActive = true;
+          lastLookX = e.clientX;
+          lastLookY = e.clientY;
+          player.targetYaw = null;
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (joyMouseActive) {
+          const r = joystickBase.getBoundingClientRect();
+          updateJoystickVisual(e.clientX - (r.left + r.width * 0.5), e.clientY - (r.top + r.height * 0.5));
+        } else if (lookMouseActive && gameState.phase === 'playing') {
+          const axisSign = rtxConfig.invertCameraAxis ? -1 : 1;
+          const sens = rtxConfig.cameraSensitivity;
+          const dx = e.clientX - lastLookX;
+          const dy = e.clientY - lastLookY;
+          lastLookX = e.clientX;
+          lastLookY = e.clientY;
+          player.yaw -= dx * 0.0042 * sens * axisSign;
+          player.pitch = clamp(player.pitch - dy * 0.0036 * sens * axisSign, -1.18, 0.88);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (joyMouseActive) {
+          joyMouseActive = false;
+          resetJoystick();
+        }
+        lookMouseActive = false;
+      });
+
+      function triggerJump() {
+        if (gameState.phase !== 'playing') return;
+        sound.init();
+        sound.resume();
+        if (player.onGround) {
+          player.vel.y = JUMP_VELOCITY;
+          player.onGround = false;
+          sound.playJump();
+        }
+      }
+
+      function centerCameraView() {
+        player.targetYaw = 0;
+        player.pitch = -0.10;
+      }
+
+      jumpBtn.addEventListener('click', triggerJump);
+      jumpBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        jumpBtn.classList.add('pressed');
+        triggerJump();
+      }, { passive: false });
+      jumpBtn.addEventListener('touchend', () => jumpBtn.classList.remove('pressed'));
+
+      straightBtn.addEventListener('click', centerCameraView);
+      straightBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        straightBtn.classList.add('pressed');
+        centerCameraView();
+      }, { passive: false });
+      straightBtn.addEventListener('touchend', () => straightBtn.classList.remove('pressed'));
+
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'Space') {
+          if (gameState.phase === 'playing') {
+            e.preventDefault();
+            triggerJump();
+          }
+        } else if (e.code === 'KeyR') {
+          centerCameraView();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+      });
+
+      // =======================================================================
+      // 11. FISIKA PEMAIN, TABRAKAN TIANG SOLID & LOGIKA PERMAINAN
+      // =======================================================================
+      function triggerGameOver(reason) {
+        if (gameState.phase === 'gameover') return;
+        gameState.phase = 'gameover';
+        gameState.cameraShake = 0.55;
+        sound.playCrash();
+
+        if (gameState.score > gameState.highScore) {
+          gameState.highScore = gameState.score;
+          try {
+            localStorage.setItem('cr3d_rtx_highscore', String(gameState.highScore));
+          } catch (e) {}
+        }
+
+        document.getElementById('gameover-reason').textContent = reason;
+        document.getElementById('go-score').textContent = gameState.score;
+        document.getElementById('go-highscore').textContent = gameState.highScore;
+        document.getElementById('go-coins').textContent = gameState.coins;
+        document.getElementById('gameover-overlay').classList.remove('hidden');
+        document.getElementById('warning-banner').classList.add('hidden');
+      }
+
+      function resolveSolidPoleCollisions() {
+        for (let iter = 0; iter < 4; iter++) {
+          for (let i = 0; i < solidPoles.length; i++) {
+            const p = solidPoles[i];
+            const dx = player.pos.x - p.x;
+            const dz = player.pos.z - p.z;
+            const minDist = PLAYER_RADIUS + p.radius;
+            const distSq = dx * dx + dz * dz;
+
+            if (distSq < minDist * minDist) {
+              const dist = Math.sqrt(distSq) || 0.0001;
+              const nx = dx / dist;
+              const nz = dz / dist;
+              const overlap = minDist - dist;
+
+              player.pos.x += nx * overlap;
+              player.pos.z += nz * overlap;
+
+              if (player.clinkCooldown <= 0) {
+                if (p.isMetal) sound.playPoleClink();
+                player.clinkCooldown = 0.28;
+              }
+            }
+          }
+        }
+      }
+
+      function updateSimulation(dt) {
+        gameState.timeElapsed += dt;
+        updateEnvironment(dt);
+
+        let trainApproaching = false;
+
+        lanes.forEach((lane) => {
+          for (let i = 0; i < lane.vehicles.length; i++) {
+            const v = lane.vehicles[i];
+            v.x += v.vx * dt;
+            if (v.vx > 0 && v.x > 38) v.x = -38;
+            else if (v.vx < 0 && v.x < -38) v.x = 38;
+          }
+
+          for (let i = 0; i < lane.logs.length; i++) {
+            const lg = lane.logs[i];
+            lg.x += lg.vx * dt;
+            if (lg.vx > 0 && lg.x > 37) lg.x = -37;
+            else if (lg.vx < 0 && lg.x < -37) lg.x = 37;
+          }
+
+          if (lane.type === 'rail') {
+            if (!lane.train) {
+              lane.trainTimer -= dt;
+              lane.trainWarning = lane.trainTimer <= 1.65;
+              if (lane.trainWarning && Math.abs(lane.z - player.pos.z) < LANE_WIDTH * 5.5) {
+                trainApproaching = true;
+              }
+              if (lane.trainTimer <= 0) {
+                lane.train = {
+                  x: lane.dir > 0 ? -52 : 52,
+                  vx: 36.0 * lane.dir,
+                  length: 26.0
+                };
+                if (Math.abs(lane.z - player.pos.z) < LANE_WIDTH * 6) {
+                  sound.playTrainWarning();
+                }
+              }
+            } else {
+              lane.trainWarning = true;
+              if (Math.abs(lane.z - player.pos.z) < LANE_WIDTH * 5.5) {
+                trainApproaching = true;
+              }
+              lane.train.x += lane.train.vx * dt;
+              if ((lane.dir > 0 && lane.train.x > 56) || (lane.dir < 0 && lane.train.x < -56)) {
+                lane.train = null;
+                lane.trainWarning = false;
+                lane.trainTimer = lane.trainInterval;
+              }
+            }
+
+            const targetGate = lane.trainWarning ? 1.35 : 0.0;
+            lane.gateAngle = lerp(lane.gateAngle, targetGate, dt * 6.5);
+          }
+
+          for (let i = 0; i < lane.coins.length; i++) {
+            lane.coins[i].phase += dt * 3.2;
+          }
+        });
+
+        const warnBanner = document.getElementById('warning-banner');
+        if (gameState.phase === 'playing' && trainApproaching) {
+          warnBanner.classList.remove('hidden');
+        } else {
+          warnBanner.classList.add('hidden');
+        }
+
+        if (gameState.phase !== 'playing') {
+          gameState.cameraShake = Math.max(0, gameState.cameraShake - dt * 1.4);
+          return;
+        }
+
+        player.clinkCooldown = Math.max(0, player.clinkCooldown - dt);
+
+        if (player.targetYaw !== null) {
+          player.yaw = lerp(player.yaw, player.targetYaw, dt * 10);
+          if (Math.abs(player.yaw - player.targetYaw) < 0.01) {
+            player.yaw = player.targetYaw;
+            player.targetYaw = null;
+          }
+        }
+
+        let fwdIn = -joyState.y;
+        let strafeIn = joyState.x;
+
+        if (keys['KeyW'] || keys['ArrowUp']) fwdIn += 1;
+        if (keys['KeyS'] || keys['ArrowDown']) fwdIn -= 1;
+        if (keys['KeyD'] || keys['ArrowRight']) strafeIn += 1;
+        if (keys['KeyA'] || keys['ArrowLeft']) strafeIn -= 1;
+
+        const mag = Math.hypot(fwdIn, strafeIn);
+        if (mag > 1) {
+          fwdIn /= mag;
+          strafeIn /= mag;
+        }
+
+        const fwdX = -Math.sin(player.yaw);
+        const fwdZ = -Math.cos(player.yaw);
+        const rightX = Math.cos(player.yaw);
+        const rightZ = -Math.sin(player.yaw);
+
+        const moveX = (fwdX * fwdIn + rightX * strafeIn) * MOVE_SPEED;
+        const moveZ = (fwdZ * fwdIn + rightZ * strafeIn) * MOVE_SPEED;
+
+        player.pos.x += (moveX + player.carryingVx) * dt;
+        player.pos.z += moveZ * dt;
+
+        player.pos.x = clamp(player.pos.x, -PLAYABLE_HALF_X, PLAYABLE_HALF_X);
+        const minAllowedZ = -(Math.max(0, gameState.maxLaneReached - 4)) * LANE_WIDTH;
+        if (player.pos.z > minAllowedZ) {
+          player.pos.z = minAllowedZ;
+        }
+
+        if (!player.onGround) {
+          player.pos.y += player.vel.y * dt;
+          player.vel.y -= GRAVITY * dt;
+          if (player.pos.y <= 0) {
+            player.pos.y = 0;
+            player.vel.y = 0;
+            player.onGround = true;
+            player.landingDip = 0.14;
+            sound.playStep();
+          }
+        }
+
+        resolveSolidPoleCollisions();
+
+        // Pembaruan animasi langkah tubuh First-Person (lengan, kaki & kepala kamera)
+        const speedHoriz = Math.hypot(moveX, moveZ);
+        const isWalking = player.onGround && speedHoriz > 0.35;
+        player.moveBlend = lerp(player.moveBlend, isWalking ? clamp(speedHoriz / MOVE_SPEED, 0, 1) : 0, dt * 11);
+        player.jumpBlend = lerp(player.jumpBlend, player.onGround ? 0 : 1, dt * 12);
+
+        if (isWalking) {
+          player.bobTimer += dt * 12.5;
+          player.stridePhase += dt * 11.5;
+          player.bobOffset = Math.sin(player.bobTimer) * 0.052;
+          player.tiltRoll = lerp(player.tiltRoll, -strafeIn * 0.032, dt * 10);
+          player.stepTimer -= dt;
+          if (player.stepTimer <= 0) {
+            sound.playStep();
+            player.stepTimer = 0.34;
+          }
+        } else {
+          player.bobOffset = lerp(player.bobOffset, 0, dt * 10);
+          player.tiltRoll = lerp(player.tiltRoll, 0, dt * 10);
+        }
+        player.landingDip = lerp(player.landingDip, 0, dt * 12);
+
+        const currentLaneIdx = Math.max(0, Math.round(-player.pos.z / LANE_WIDTH));
+        if (currentLaneIdx > gameState.maxLaneReached) {
+          gameState.score += (currentLaneIdx - gameState.maxLaneReached);
+          gameState.maxLaneReached = currentLaneIdx;
+        }
+        ensureLanesAround(currentLaneIdx);
+
+        player.carryingVx = 0;
+        const lane = lanes.get(currentLaneIdx);
+        if (lane) {
+          for (let i = 0; i < lane.coins.length; i++) {
+            const c = lane.coins[i];
+            if (!c.collected && Math.hypot(player.pos.x - c.x, player.pos.z - c.z) < 1.15) {
+              c.collected = true;
+              gameState.coins += 1;
+              gameState.score += 2;
+              sound.playCoin();
+            }
+          }
+
+          if (lane.type === 'road' && player.pos.y < 1.25) {
+            for (let i = 0; i < lane.vehicles.length; i++) {
+              const v = lane.vehicles[i];
+              if (
+                Math.abs(player.pos.x - v.x) < (v.length * 0.48 + PLAYER_RADIUS * 0.7) &&
+                Math.abs(player.pos.z - v.z) < (v.width * 0.46 + PLAYER_RADIUS * 0.7)
+              ) {
+                triggerGameOver('Tertabrak kendaraan di jalan raya!');
+                return;
+              }
+            }
+          }
+
+          if (lane.type === 'rail' && lane.train && player.pos.y < 1.8) {
+            if (
+              Math.abs(player.pos.x - lane.train.x) < (lane.train.length * 0.49 + PLAYER_RADIUS * 0.7) &&
+              Math.abs(player.pos.z - lane.z) < 1.15
+            ) {
+              triggerGameOver('Tertabrak kereta ekspres berkecepatan tinggi!');
+              return;
+            }
+          }
+
+          if (lane.type === 'river' && player.onGround && Math.abs(player.pos.z - lane.z) < LANE_WIDTH * 0.42) {
+            let safeOnPlatform = false;
+
+            for (let i = 0; i < lane.logs.length; i++) {
+              const lg = lane.logs[i];
+              if (Math.abs(player.pos.x - lg.x) < lg.length * 0.52) {
+                safeOnPlatform = true;
+                player.carryingVx = lg.vx;
+                break;
+              }
+            }
+
+            if (!safeOnPlatform) {
+              for (let i = 0; i < lane.lilypads.length; i++) {
+                const lp = lane.lilypads[i];
+                if (Math.abs(player.pos.x - lp.x) < lp.radius) {
+                  safeOnPlatform = true;
+                  break;
+                }
+              }
+            }
+
+            if (!safeOnPlatform) {
+              triggerGameOver('Terjatuh ke sungai yang deras!');
+              return;
+            }
+
+            if (Math.abs(player.pos.x) >= PLAYABLE_HALF_X - 0.15) {
+              triggerGameOver('Terbawa arus sungai keluar batas!');
+              return;
+            }
+          }
+        }
+      }
+
+      // =======================================================================
+      // 12. PEMBANGUN ADEGAN 3D DETAIL + POHON ANGIN + DYNAMIC FIRST-PERSON BODY
+      // =======================================================================
+      function buildDynamicFirstPersonBody() {
+        playerBodyBatch.reset();
+        playerHeadShadowBatch.reset();
+
+        const px = player.pos.x;
+        const py = player.pos.y;
+        const pz = player.pos.z;
+        const yaw = player.yaw;
+
+        // Basis horizontal tubuh pemain mengikuti arah pandangan yaw
+        const fwdX = -Math.sin(yaw);
+        const fwdZ = -Math.cos(yaw);
+        const rightX = Math.cos(yaw);
+        const rightZ = -Math.sin(yaw);
+
+        const toWorld = (localRight, localUp, localForward) => [
+          px + rightX * localRight + fwdX * localForward,
+          py + localUp,
+          pz + rightZ * localRight + fwdZ * localForward
+        ];
+
+        const swing = Math.sin(player.stridePhase) * player.moveBlend;
+        const jumpLift = player.jumpBlend;
+        const idleBreath = Math.sin(gameState.timeElapsed * 2.6) * 0.012;
+
+        // 1. Tubuh / Jaket Petualang (sedikit di belakang garis mata agar tidak menghalangi kamera)
+        const [tx, ty, tz] = toWorld(0, 1.04 + idleBreath, -0.11);
+        playerBodyBatch.addBoxRotY(tx, ty, tz, 0.44, 0.56, 0.24, yaw, 0.14, 0.52, 0.88, 0.45, 0, 0, 0, 1);
+        // Sabuk taktis
+        const [bx, by, bz] = toWorld(0, 0.76 + idleBreath, -0.10);
+        playerBodyBatch.addBoxRotY(bx, by, bz, 0.46, 0.08, 0.26, yaw, 0.15, 0.16, 0.20, 0.6, 0, 0, 0, 1);
+
+        // 2. Lengan Kiri & Lengan Kanan (berayun dinamis saat berjalan & terangkat saat melompat!)
+        const leftArmFwd = 0.22 + (-swing * 0.26) + jumpLift * 0.24;
+        const leftArmUp = 0.96 + Math.abs(swing) * 0.06 + jumpLift * 0.16 + idleBreath;
+        const [lax, lay, laz] = toWorld(-0.29, leftArmUp, leftArmFwd);
+        playerBodyBatch.addBoxRotY(lax, lay, laz, 0.14, 0.36, 0.24, yaw, 0.16, 0.56, 0.92, 0.45, 0, 0, 0, 1);
+        // Sarung tangan kiri
+        const [lhx, lhy, lhz] = toWorld(-0.29, leftArmUp - 0.14, leftArmFwd + 0.12);
+        playerBodyBatch.addBoxRotY(lhx, lhy, lhz, 0.13, 0.13, 0.15, yaw, 0.94, 0.76, 0.62, 0.35, 0, 0, 0, 1);
+
+        const rightArmFwd = 0.22 + (swing * 0.26) + jumpLift * 0.24;
+        const rightArmUp = 0.96 + Math.abs(swing) * 0.06 + jumpLift * 0.16 + idleBreath;
+        const [rax, ray, raz] = toWorld(0.29, rightArmUp, rightArmFwd);
+        playerBodyBatch.addBoxRotY(rax, ray, raz, 0.14, 0.36, 0.24, yaw, 0.16, 0.56, 0.92, 0.45, 0, 0, 0, 1);
+        // Sarung tangan kanan
+        const [rhx, rhy, rhz] = toWorld(0.29, rightArmUp - 0.14, rightArmFwd + 0.12);
+        playerBodyBatch.addBoxRotY(rhx, rhy, rhz, 0.13, 0.13, 0.15, yaw, 0.94, 0.76, 0.62, 0.35, 0, 0, 0, 1);
+
+        // 3. Kaki Kiri & Kaki Kanan + Sepatu (terlihat jelas saat menunduk & melangkah!)
+        const leftLegFwd = 0.04 + swing * 0.28 + jumpLift * 0.18;
+        const leftLegUp = 0.38 + Math.max(0, swing) * 0.08 + jumpLift * 0.14;
+        const [llx, lly, llz] = toWorld(-0.13, leftLegUp, leftLegFwd);
+        playerBodyBatch.addBoxRotY(llx, lly, llz, 0.16, 0.52, 0.18, yaw, 0.18, 0.24, 0.34, 0.3, 0, 0, 0, 1);
+        const [lsx, lsy, lsz] = toWorld(-0.13, leftLegUp - 0.28, leftLegFwd + 0.08);
+        playerBodyBatch.addBoxRotY(lsx, lsy, lsz, 0.17, 0.12, 0.28, yaw, 0.92, 0.30, 0.24, 0.55, 0, 0, 0, 1);
+
+        const rightLegFwd = 0.04 - swing * 0.28 + jumpLift * 0.10;
+        const rightLegUp = 0.38 + Math.max(0, -swing) * 0.08 + jumpLift * 0.08;
+        const [rlx, rly, rlz] = toWorld(0.13, rightLegUp, rightLegFwd);
+        playerBodyBatch.addBoxRotY(rlx, rly, rlz, 0.16, 0.52, 0.18, yaw, 0.18, 0.24, 0.34, 0.3, 0, 0, 0, 1);
+        const [rsx, rsy, rsz] = toWorld(0.13, rightLegUp - 0.28, rightLegFwd + 0.08);
+        playerBodyBatch.addBoxRotY(rsx, rsy, rsz, 0.17, 0.12, 0.28, yaw, 0.92, 0.30, 0.24, 0.55, 0, 0, 0, 1);
+
+        // 4. Kepala & Topi Karakter (Hanya dirender ke Shadow Pass & Reflection Pass agar tidak menghalangi kamera First-Person)
+        const [hx, hy, hz] = toWorld(0, 1.56 + idleBreath, -0.06);
+        playerHeadShadowBatch.addBoxRotY(hx, hy, hz, 0.34, 0.34, 0.34, yaw, 0.94, 0.76, 0.62, 0.3, 0, 0, 0, 1);
+        const [capX, capY, capZ] = toWorld(0, 1.75 + idleBreath, -0.02);
+        playerHeadShadowBatch.addBoxRotY(capX, capY, capZ, 0.36, 0.10, 0.42, yaw, 0.92, 0.26, 0.22, 0.4, 0, 0, 0, 1);
+      }
+
+      function buildWorldGeometry() {
+        opaqueBatch.reset();
+        reflBatch.reset();
+        dynamicLights.length = 0;
+
+        const nf = envState.nightFactor;
+        const lampActive = (nf > 0.35 || envState.fogDensity > 0.016 || envState.activeWeather !== 'clear');
+        const lampPower = lampActive ? (0.45 + nf * 0.85) : 0.0;
+
+        const windFreq = 1.9 + envState.windSpeed * 0.09;
+        const windAmp = envState.windSpeed * 0.0085;
+        const windDirX = Math.cos(envState.windAngle);
+        const windDirZ = Math.sin(envState.windAngle);
+        const spanW = VISUAL_HALF_X * 2; // 128 unit lebar
+
+        lanes.forEach((lane) => {
+          const z = lane.z;
+
+          if (lane.type === 'grass') {
+            const shade = (lane.index % 2 === 0) ? 1.0 : 0.94;
+            opaqueBatch.addBox(0, -0.25, z, spanW, 0.5, LANE_WIDTH, 0.19 * shade, 0.56 * shade, 0.23 * shade, 0.12, 0, 0, 0, 2);
+
+            // Pembatas batas tepi bermain kiri & kanan (±32.5)
+            opaqueBatch.addBox(-PLAYABLE_HALF_X - 0.6, 0.45, z, 0.45, 0.9, LANE_WIDTH * 0.9, 0.38, 0.26, 0.15, 0.2, 0, 0, 0, 3);
+            opaqueBatch.addBox(PLAYABLE_HALF_X + 0.6, 0.45, z, 0.45, 0.9, LANE_WIDTH * 0.9, 0.38, 0.26, 0.15, 0.2, 0, 0, 0, 3);
+
+            // Lampu Jalan RTX
+            for (let i = 0; i < lane.streetlamps.length; i++) {
+              const sl = lane.streetlamps[i];
+              opaqueBatch.addBox(sl.x, 2.1, sl.z, 0.24, 4.2, 0.24, 0.18, 0.21, 0.26, 0.82, 0, 0, 0, 1);
+              opaqueBatch.addBox(sl.x, 0.18, sl.z, 0.54, 0.36, 0.54, 0.36, 0.39, 0.44, 0.35, 0, 0, 0, 2);
+              const armZ = sl.z + sl.armDir * 0.65;
+              opaqueBatch.addBox(sl.x, 4.15, armZ, 0.18, 0.16, 1.45, 0.20, 0.24, 0.30, 0.82, 0, 0, 0, 1);
+
+              const bulbZ = sl.z + sl.armDir * 1.25;
+              const em = lampPower * 2.4;
+              opaqueBatch.addBox(sl.x, 4.02, bulbZ, 0.36, 0.16, 0.36, 1.0, 0.88, 0.65, 0.95, em * 1.4, em * 0.95, em * 0.45, 1);
+
+              if (lampPower > 0.05) {
+                dynamicLights.push({
+                  x: sl.x, y: 3.85, z: bulbZ,
+                  range: 15.0,
+                  r: 1.55 * lampPower, g: 1.02 * lampPower, b: 0.46 * lampPower,
+                  cutoff: 0.24,
+                  dx: 0, dy: -0.94, dz: sl.armDir * 0.34,
+                  exp: 1.5
+                });
+              }
+            }
+
+            // Pohon Detail Berlapis & Animasi Angin Real-Time + Batu Bertekstur
+            for (let i = 0; i < lane.obstacles.length; i++) {
+              const ob = lane.obstacles[i];
+              if (ob.kind === 'tree') {
+                const gust = Math.sin(gameState.timeElapsed * windFreq + ob.swayPhase)
+                  + 0.45 * Math.sin(gameState.timeElapsed * (windFreq * 1.85) + ob.swayPhase * 1.7);
+                const swayX = windDirX * windAmp * gust;
+                const swayZ = windDirZ * windAmp * gust;
+                const h = ob.leafHue;
+
+                // Akar & Batang Kayu Beralur (Tile 0: Bark & Foliage)
+                opaqueBatch.addBox(ob.x, 0.14, ob.z, 0.92, 0.28, 0.92, 0.34, 0.21, 0.11, 0.14, 0, 0, 0, 0);
+                opaqueBatch.addBox(ob.x + swayX * 0.12, 0.95, ob.z + swayZ * 0.12, 0.62, 1.85, 0.62, 0.38, 0.23, 0.12, 0.14, 0, 0, 0, 0);
+
+                // Ranting samping & 3 tingkat mahkota dedaunan bertingkat yang berayun progresif
+                opaqueBatch.addBox(ob.x + swayX * 0.65 + 0.62, 1.95, ob.z + swayZ * 0.65, 0.75, 0.22, 0.22, 0.35, 0.21, 0.11, 0.12, 0, 0, 0, 0);
+                opaqueBatch.addBox(ob.x + swayX * 0.85, 2.25, ob.z + swayZ * 0.85, 2.15, 1.15, 2.15, 0.12 + h, 0.45, 0.16, 0.18, 0, 0, 0, 0);
+                opaqueBatch.addBox(ob.x + swayX * 1.35, 3.12, ob.z + swayZ * 1.35, 1.62, 0.95, 1.62, 0.15 + h, 0.54, 0.19, 0.22, 0, 0, 0, 0);
+                opaqueBatch.addBox(ob.x + swayX * 1.85, 3.85, ob.z + swayZ * 1.85, 0.96, 0.72, 0.96, 0.18 + h, 0.62, 0.22, 0.25, 0, 0, 0, 0);
+              } else {
+                opaqueBatch.addBox(ob.x, ob.height * 0.45, ob.z, 1.22, ob.height, 1.12, 0.44, 0.47, 0.52, 0.30, 0, 0, 0, 2);
+                opaqueBatch.addBox(ob.x + 0.25, ob.height * 0.72, ob.z - 0.18, 0.68, ob.height * 0.55, 0.64, 0.50, 0.53, 0.58, 0.34, 0, 0, 0, 2);
+              }
+            }
+          } else if (lane.type === 'road') {
+            // Aspal mikro reflektif luas
+            reflBatch.addBox(0, -0.24, z, spanW, 0.5, LANE_WIDTH, 0.13, 0.14, 0.17, 0.0, 0, 0, 0, 2);
+
+            for (let mx = -44; mx <= 44; mx += 4) {
+              opaqueBatch.addBox(mx, 0.025, z, 1.75, 0.02, 0.18, 0.90, 0.92, 0.95, 0.40, 0, 0, 0, 2);
+            }
+
+            // Kendaraan Detail HD (Tile 1: Metalik & Panel)
+            for (let i = 0; i < lane.vehicles.length; i++) {
+              const v = lane.vehicles[i];
+              const [cr, cg, cb] = v.color;
+              const fDir = v.vx >= 0 ? 1 : -1;
+
+              // Bodi utama metalik glossy
+              opaqueBatch.addBox(v.x, v.height * 0.44 + 0.18, v.z, v.length, v.height * 0.68, v.width, cr, cg, cb, 0.85, 0, 0, 0, 1);
+              // Bumper krom depan & belakang
+              opaqueBatch.addBox(v.x + fDir * (v.length * 0.50), 0.30, v.z, 0.14, 0.20, v.width * 1.02, 0.78, 0.82, 0.88, 0.95, 0, 0, 0, 1);
+              opaqueBatch.addBox(v.x - fDir * (v.length * 0.50), 0.30, v.z, 0.14, 0.20, v.width * 1.02, 0.72, 0.76, 0.82, 0.90, 0, 0, 0, 1);
+
+              // Kabin kaca reflektif
+              const cabX = v.isTruck ? v.x + fDir * (v.length * 0.26) : v.x - fDir * 0.12;
+              const cabLen = v.isTruck ? v.length * 0.36 : v.length * 0.56;
+              opaqueBatch.addBox(cabX, v.height * 0.90 + 0.18, v.z, cabLen, v.height * 0.46, v.width * 0.86, 0.14, 0.22, 0.32, 0.96, 0, 0, 0, 1);
+
+              // Ban & Velg Alloy
+              const wx = v.length * 0.32, wz = v.width * 0.48;
+              opaqueBatch.addBox(v.x - wx, 0.24, v.z - wz, 0.54, 0.48, 0.24, 0.08, 0.08, 0.09, 0.35, 0, 0, 0, 1);
+              opaqueBatch.addBox(v.x + wx, 0.24, v.z - wz, 0.54, 0.48, 0.24, 0.08, 0.08, 0.09, 0.35, 0, 0, 0, 1);
+              opaqueBatch.addBox(v.x - wx, 0.24, v.z + wz, 0.54, 0.48, 0.24, 0.08, 0.08, 0.09, 0.35, 0, 0, 0, 1);
+              opaqueBatch.addBox(v.x + wx, 0.24, v.z + wz, 0.54, 0.48, 0.24, 0.08, 0.08, 0.09, 0.35, 0, 0, 0, 1);
+
+              // Lampu Sorot Depan Xenon (Aktif di semua siklus, super terang di malam hari)
+              const headX = v.x + fDir * (v.length * 0.51);
+              const hlBoost = 0.75 + nf * 2.15;
+              opaqueBatch.addBox(headX, 0.56, v.z - v.width * 0.32, 0.12, 0.20, 0.28, 1, 1, 1, 1.0, 2.1 * hlBoost, 2.2 * hlBoost, 2.5 * hlBoost, 1);
+              opaqueBatch.addBox(headX, 0.56, v.z + v.width * 0.32, 0.12, 0.20, 0.28, 1, 1, 1, 1.0, 2.1 * hlBoost, 2.2 * hlBoost, 2.5 * hlBoost, 1);
+
+              // Lampu Rem Belakang Merah
+              const tailX = v.x - fDir * (v.length * 0.51);
+              opaqueBatch.addBox(tailX, 0.58, v.z - v.width * 0.32, 0.10, 0.18, 0.26, 1, 0.1, 0.1, 0.9, 1.9 * hlBoost, 0.14 * hlBoost, 0.12 * hlBoost, 1);
+              opaqueBatch.addBox(tailX, 0.58, v.z + v.width * 0.32, 0.10, 0.18, 0.26, 1, 0.1, 0.1, 0.9, 1.9 * hlBoost, 0.14 * hlBoost, 0.12 * hlBoost, 1);
+
+              dynamicLights.push({
+                x: headX + fDir * 0.25, y: 0.65, z: v.z,
+                range: 14.0,
+                r: 1.50 * hlBoost, g: 1.58 * hlBoost, b: 1.80 * hlBoost,
+                cutoff: 0.50,
+                dx: fDir * 0.96, dy: -0.26, dz: 0,
+                exp: 2.0
+              });
+
+              if (nf > 0.35) {
+                dynamicLights.push({
+                  x: tailX - fDir * 0.2, y: 0.62, z: v.z,
+                  range: 5.5,
+                  r: 1.35 * nf, g: 0.12 * nf, b: 0.10 * nf,
+                  cutoff: 0.0,
+                  dx: 0, dy: -1, dz: 0,
+                  exp: 1.0
+                });
+              }
+            }
+          } else if (lane.type === 'river') {
+            reflBatch.addBox(0, -0.32, z, spanW, 0.44, LANE_WIDTH, 0.05, 0.29, 0.44, 1.0, 0, 0, 0, 3);
+
+            for (let i = 0; i < lane.logs.length; i++) {
+              const lg = lane.logs[i];
+              opaqueBatch.addBox(lg.x, -0.02, lg.z, lg.length, 0.34, lg.width, 0.48, 0.28, 0.14, 0.22, 0, 0, 0, 3);
+            }
+
+            for (let i = 0; i < lane.lilypads.length; i++) {
+              const lp = lane.lilypads[i];
+              opaqueBatch.addBox(lp.x, 0.02, lp.z, 1.75, 0.12, 1.75, 0.15, 0.64, 0.25, 0.26, 0, 0, 0, 0);
+            }
+          } else if (lane.type === 'rail') {
+            opaqueBatch.addBox(0, -0.25, z, spanW, 0.5, LANE_WIDTH, 0.24, 0.22, 0.21, 0.14, 0, 0, 0, 2);
+            for (let tx = -44; tx <= 44; tx += 1.4) {
+              opaqueBatch.addBox(tx, 0.03, z, 0.42, 0.08, 2.1, 0.34, 0.21, 0.13, 0.16, 0, 0, 0, 3);
+            }
+            opaqueBatch.addBox(0, 0.10, z - 0.68, spanW, 0.12, 0.14, 0.72, 0.76, 0.82, 0.92, 0, 0, 0, 3);
+            opaqueBatch.addBox(0, 0.10, z + 0.68, spanW, 0.12, 0.14, 0.72, 0.76, 0.82, 0.92, 0, 0, 0, 3);
+
+            const blinkOn = lane.trainWarning && (Math.sin(gameState.timeElapsed * 16) > 0);
+            if (lane.gatePoles) {
+              for (let i = 0; i < lane.gatePoles.length; i++) {
+                const gp = lane.gatePoles[i];
+                opaqueBatch.addBox(gp.x, 1.35, gp.z, 0.22, 2.7, 0.22, 0.78, 0.82, 0.86, 0.78, 0, 0, 0, 1);
+                const sigEm = blinkOn ? 3.2 : 0.0;
+                opaqueBatch.addBox(gp.x, 2.35, gp.z + 0.14, 0.44, 0.26, 0.18, 0.95, 0.12, 0.12, 0.9, sigEm, sigEm * 0.08, sigEm * 0.06, 1);
+
+                if (blinkOn) {
+                  dynamicLights.push({
+                    x: gp.x, y: 2.35, z: gp.z + 0.3,
+                    range: 9.5,
+                    r: 2.4, g: 0.18, b: 0.14,
+                    cutoff: 0.0,
+                    dx: 0, dy: -1, dz: 0,
+                    exp: 1.0
+                  });
+                }
+              }
+            }
+
+            if (lane.train) {
+              const tr = lane.train;
+              const fDir = tr.vx >= 0 ? 1 : -1;
+              opaqueBatch.addBox(tr.x, 1.35, z, tr.length, 2.35, 1.98, 0.18, 0.25, 0.38, 0.88, 0, 0, 0, 1);
+              opaqueBatch.addBox(tr.x, 2.58, z, tr.length * 0.96, 0.22, 1.78, 0.88, 0.24, 0.26, 0.78, 0, 0, 0, 1);
+
+              const winBoost = 0.85 + nf * 1.5;
+              for (let wx = -tr.length * 0.36; wx <= tr.length * 0.36; wx += 2.6) {
+                opaqueBatch.addBox(tr.x + wx, 1.55, z + 1.00, 1.35, 0.68, 0.06, 1, 0.9, 0.6, 0.95, 1.4 * winBoost, 1.05 * winBoost, 0.55 * winBoost, 1);
+                opaqueBatch.addBox(tr.x + wx, 1.55, z - 1.00, 1.35, 0.68, 0.06, 1, 0.9, 0.6, 0.95, 1.4 * winBoost, 1.05 * winBoost, 0.55 * winBoost, 1);
+              }
+
+              const noseX = tr.x + fDir * (tr.length * 0.51);
+              opaqueBatch.addBox(noseX, 1.15, z, 0.18, 0.42, 0.68, 1, 1, 1, 1.0, 3.8, 3.6, 3.1, 1);
+              dynamicLights.push({
+                x: noseX + fDir * 0.3, y: 1.25, z,
+                range: 20.0,
+                r: 2.6, g: 2.4, b: 2.0,
+                cutoff: 0.45,
+                dx: fDir * 0.95, dy: -0.28, dz: 0,
+                exp: 2.0
+              });
+            }
+          }
+
+          for (let i = 0; i < lane.coins.length; i++) {
+            const c = lane.coins[i];
+            if (!c.collected) {
+              const bobY = 0.75 + Math.sin(c.phase) * 0.14;
+              opaqueBatch.addBoxRotY(c.x, bobY, c.z, 0.62, 0.62, 0.18, c.phase, 1.0, 0.84, 0.15, 0.96, 1.1, 0.82, 0.12, 1);
+            }
+          }
+        });
+
+        // Partikel Hujan 3D
+        if (envState.rainIntensity > 0.03) {
+          const activeDrops = Math.floor(rainDrops.length * envState.rainIntensity);
+          const windSlantX = (envState.windSpeed / 54) * 0.24;
+          for (let i = 0; i < activeDrops; i++) {
+            const d = rainDrops[i];
+            d.y -= d.speed * 0.016;
+            d.x += windSlantX * 0.45;
+            if (d.y < 0) {
+              d.y = 14 + Math.random() * 4;
+              d.x = player.pos.x + (Math.random() - 0.5) * 44;
+              d.z = player.pos.z + (Math.random() - 0.5) * 44;
+            }
+            opaqueBatch.addBox(d.x, d.y, d.z, 0.035, 0.55, 0.035, 0.68, 0.84, 1.0, 0.6, 0.22, 0.30, 0.42, 3);
+          }
+        }
+
+        buildDynamicFirstPersonBody();
+      }
+
+      // =======================================================================
+      // 13. PIPELINE RENDERING MULTI-PASS RTX (SHADOW -> REFL -> SCENE -> DLSS/BLOOM)
+      // =======================================================================
+      const projMat = Mat4.create();
+      const viewMat = Mat4.create();
+      const viewProjMat = Mat4.create();
+      const reflViewMat = Mat4.create();
+      const reflViewProjMat = Mat4.create();
+
+      const lightOrthoMat = Mat4.create();
+      const lightViewMat = Mat4.create();
+      const lightViewProjMat = Mat4.create();
+
+      const lightPosArr = new Float32Array(MAX_LIGHTS * 4);
+      const lightColorArr = new Float32Array(MAX_LIGHTS * 4);
+      const lightDirArr = new Float32Array(MAX_LIGHTS * 4);
+
+      function uploadUniforms(locs, vpMatrix, eyeX, eyeY, eyeZ, isReflPass, directOut) {
+        gl.uniformMatrix4fv(locs.uViewProj, false, vpMatrix);
+        gl.uniformMatrix4fv(locs.uLightViewProj, false, lightViewProjMat);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, detailAtlasTex);
+        gl.uniform1i(locs.uDetailAtlas, 1);
+
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, canShadow ? shadowFBO.tex : null);
+        gl.uniform1i(locs.uShadowMap, 2);
+        gl.uniform1f(locs.uShadowTexel, 1.0 / SHADOW_RES);
+        gl.uniform1f(locs.uShadowsEnabled, (canShadow && rtxConfig.shadowsEnabled) ? 1.0 : 0.0);
+
+        gl.uniform3f(locs.uCamPos, eyeX, eyeY, eyeZ);
+        gl.uniform1f(locs.uClipRefl, isReflPass ? 1.0 : 0.0);
+        gl.uniform1f(locs.uDirectOutput, directOut ? 1.0 : 0.0);
+        gl.uniform1f(locs.uBrightness, rtxConfig.brightness);
+        gl.uniform1f(locs.uRenderDist, rtxConfig.renderDistance);
+
+        gl.uniform3fv(locs.uSunDir, envState.sunDir);
+        gl.uniform3fv(locs.uSunColor, envState.sunColor);
+        gl.uniform3fv(locs.uAmbientSky, envState.ambientSky);
+        gl.uniform3fv(locs.uAmbientGround, envState.ambientGround);
+        gl.uniform3fv(locs.uSkyHorizon, envState.skyHorizon);
+        gl.uniform3fv(locs.uSkyTop, envState.skyTop);
+        gl.uniform1f(locs.uFogDensity, envState.fogDensity);
+        gl.uniform1f(locs.uLightning, gameState.lightningFlash);
+
+        gl.uniform4fv(locs.uLightPos, lightPosArr);
+        gl.uniform4fv(locs.uLightColor, lightColorArr);
+        gl.uniform4fv(locs.uLightDir, lightDirArr);
+      }
+
+      function renderFrame() {
+        buildWorldGeometry();
+
+        opaqueUploader.upload(opaqueBatch);
+        reflUploader.upload(reflBatch);
+        playerBodyUploader.upload(playerBodyBatch);
+        playerHeadShadowUploader.upload(playerHeadShadowBatch);
+
+        dynamicLights.sort((a, b) => {
+          const da = (a.x - player.pos.x) ** 2 + (a.z - player.pos.z) ** 2;
+          const db = (b.x - player.pos.x) ** 2 + (b.z - player.pos.z) ** 2;
+          return da - db;
+        });
+
+        lightPosArr.fill(0);
+        lightColorArr.fill(0);
+        lightDirArr.fill(0);
+        const count = Math.min(MAX_LIGHTS, dynamicLights.length);
+        for (let i = 0; i < count; i++) {
+          const L = dynamicLights[i];
+          const o = i * 4;
+          lightPosArr[o] = L.x;
+          lightPosArr[o + 1] = L.y;
+          lightPosArr[o + 2] = L.z;
+          lightPosArr[o + 3] = L.range;
+
+          lightColorArr[o] = L.r;
+          lightColorArr[o + 1] = L.g;
+          lightColorArr[o + 2] = L.b;
+          lightColorArr[o + 3] = L.cutoff;
+
+          lightDirArr[o] = L.dx;
+          lightDirArr[o + 1] = L.dy;
+          lightDirArr[o + 2] = L.dz;
+          lightDirArr[o + 3] = L.exp;
+        }
+
+        const shakeX = (Math.random() - 0.5) * gameState.cameraShake * 0.35;
+        const shakeY = (Math.random() - 0.5) * gameState.cameraShake * 0.35;
+        const eyeX = player.pos.x + shakeX;
+        const eyeY = player.pos.y + EYE_HEIGHT + player.bobOffset - player.landingDip + shakeY;
+        const eyeZ = player.pos.z;
+
+        const aspect = outputW / Math.max(1, outputH);
+        const fov = aspect < 1.0 ? (76 * Math.PI / 180) : (68 * Math.PI / 180);
+        Mat4.perspective(projMat, fov, aspect, 0.12, rtxConfig.renderDistance);
+
+        const skyR = clamp((envState.skyHorizon[0] + gameState.lightningFlash * 0.5) * 0.5, 0, 1);
+        const skyG = clamp((envState.skyHorizon[1] + gameState.lightningFlash * 0.5) * 0.5, 0, 1);
+        const skyB = clamp((envState.skyHorizon[2] + gameState.lightningFlash * 0.6) * 0.5, 0, 1);
+
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+
+        // PASS 0: Real-Time Directional Shadow Map (termasuk Player Shadow penuh!)
+        if (canShadow && rtxConfig.shadowsEnabled && shadowFBO) {
+          const focusX = player.pos.x;
+          const focusZ = player.pos.z - 12.0;
+          const sdx = envState.sunDir[0];
+          const sdy = Math.min(-0.35, envState.sunDir[1]);
+          const sdz = envState.sunDir[2];
+
+          Mat4.ortho(lightOrthoMat, -36, 36, -36, 36, 1.0, 95.0);
+          Mat4.lookAt(
+            lightViewMat,
+            focusX - sdx * 38.0, -sdy * 38.0, focusZ - sdz * 38.0,
+            focusX, 0.0, focusZ,
+            0, 1, 0
+          );
+          Mat4.multiply(lightViewProjMat, lightOrthoMat, lightViewMat);
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO.fbo);
+          gl.viewport(0, 0, shadowFBO.w, shadowFBO.h);
+          gl.clearColor(1, 1, 1, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+          gl.useProgram(progShadow);
+          gl.uniformMatrix4fv(locShadow.uLightViewProj, false, lightViewProjMat);
+          opaqueUploader.drawShadow(locShadow);
+          playerBodyUploader.drawShadow(locShadow);
+          playerHeadShadowUploader.drawShadow(locShadow);
+        }
+
+        // PASS 1: Refleksi Planar Real-Time
+        if (canReflect && reflFBO) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, reflFBO.fbo);
+          gl.viewport(0, 0, reflFBO.w, reflFBO.h);
+          gl.clearColor(skyR, skyG, skyB, 1.0);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+          const reflEyeY = 0.04 - eyeY;
+          Mat4.fromFPS(reflViewMat, eyeX, reflEyeY, eyeZ, player.yaw, -player.pitch, -player.tiltRoll);
+          Mat4.multiply(reflViewProjMat, projMat, reflViewMat);
+
+          gl.useProgram(progMain);
+          uploadUniforms(locMain, reflViewProjMat, eyeX, reflEyeY, eyeZ, true, false);
+          opaqueUploader.drawMain(locMain);
+          playerBodyUploader.drawMain(locMain);
+          playerHeadShadowUploader.drawMain(locMain);
+        }
+
+        // PASS 2: Adegan 3D Utama (dirender pada resolusi internal DLSS)
+        const directToScreen = !canPostProcess;
+        if (directToScreen) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.viewport(0, 0, outputW, outputH);
+          gl.clearColor(clamp(skyR * 2, 0, 1), clamp(skyG * 2, 0, 1), clamp(skyB * 2, 0, 1), 1.0);
+        } else {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFBO.fbo);
+          gl.viewport(0, 0, sceneFBO.w, sceneFBO.h);
+          gl.clearColor(skyR, skyG, skyB, 1.0);
+        }
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        Mat4.fromFPS(viewMat, eyeX, eyeY, eyeZ, player.yaw, player.pitch, player.tiltRoll);
+        Mat4.multiply(viewProjMat, projMat, viewMat);
+
+        gl.useProgram(progMain);
+        uploadUniforms(locMain, viewProjMat, eyeX, eyeY, eyeZ, false, directToScreen);
+        opaqueUploader.drawMain(locMain);
+        // Gambar Dynamic First-Person Body (lengan, jaket & kaki pemain saat melangkah/menunduk)
+        playerBodyUploader.drawMain(locMain);
+
+        gl.useProgram(progRefl);
+        uploadUniforms(locRefl, viewProjMat, eyeX, eyeY, eyeZ, false, directToScreen);
+        gl.uniformMatrix4fv(locRefl.uReflViewProj, false, reflViewProjMat);
+        gl.uniform1f(locRefl.uHasReflection, canReflect ? 1.0 : 0.0);
+        gl.uniform1f(locRefl.uWetness, envState.wetness);
+        gl.uniform1f(locRefl.uTime, gameState.timeElapsed);
+        gl.uniform1f(locRefl.uWindSpeed, envState.windSpeed);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, canReflect ? reflFBO.tex : null);
+        gl.uniform1i(locRefl.uReflectionTex, 0);
+        reflUploader.drawMain(locRefl);
+
+        // PASS 3: Bloom RTX + DLSS RTX Contrast Adaptive Upscaling + ACES
+        if (!directToScreen) {
+          gl.disable(gl.DEPTH_TEST);
+          gl.bindBuffer(gl.ARRAY_BUFFER, quadVBO);
+
+          if (rtxConfig.bloomEnabled && rtxConfig.bloomStrength > 0.01) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO_A.fbo);
+            gl.viewport(0, 0, bloomFBO_A.w, bloomFBO_A.h);
+            gl.useProgram(progBright);
+            gl.enableVertexAttribArray(locBright.aQuadPos);
+            gl.vertexAttribPointer(locBright.aQuadPos, 2, gl.FLOAT, false, 0, 0);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, sceneFBO.tex);
+            gl.uniform1i(locBright.uSceneTex, 0);
+            gl.uniform1f(locBright.uThreshold, rtxConfig.bloomThreshold);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            const spread = 0.8 + rtxConfig.bloomRadius * 2.4;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO_B.fbo);
+            gl.useProgram(progBlur);
+            gl.enableVertexAttribArray(locBlur.aQuadPos);
+            gl.vertexAttribPointer(locBlur.aQuadPos, 2, gl.FLOAT, false, 0, 0);
+            gl.bindTexture(gl.TEXTURE_2D, bloomFBO_A.tex);
+            gl.uniform1i(locBlur.uTex, 0);
+            gl.uniform2f(locBlur.uTexelOffset, spread / bloomFBO_A.w, 0.0);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO_A.fbo);
+            gl.bindTexture(gl.TEXTURE_2D, bloomFBO_B.tex);
+            gl.uniform2f(locBlur.uTexelOffset, 0.0, spread / bloomFBO_A.h);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          }
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.viewport(0, 0, outputW, outputH);
+          gl.useProgram(progComp);
+          gl.enableVertexAttribArray(locComp.aQuadPos);
+          gl.vertexAttribPointer(locComp.aQuadPos, 2, gl.FLOAT, false, 0, 0);
+
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, sceneFBO.tex);
+          gl.uniform1i(locComp.uSceneTex, 0);
+
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, bloomFBO_A.tex);
+          gl.uniform1i(locComp.uBloomTex, 1);
+
+          gl.uniform2f(locComp.uSceneTexel, 1.0 / sceneFBO.w, 1.0 / sceneFBO.h);
+          gl.uniform1f(locComp.uDlssActive, rtxConfig.dlssMode !== 'off' ? 1.0 : 0.0);
+          gl.uniform1f(locComp.uDlssSharpen, rtxConfig.dlssSharpen);
+          gl.uniform1f(locComp.uBloomEnabled, rtxConfig.bloomEnabled ? 1.0 : 0.0);
+          gl.uniform1f(locComp.uBloomStrength, rtxConfig.bloomStrength);
+          gl.uniform1f(locComp.uBrightness, rtxConfig.brightness);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+      }
+
+      // =======================================================================
+      // 14. PEMBARUAN HUD, FULLSCREEN, ORIENTASI & KONTROL PENGATURAN RTX
+      // =======================================================================
+      let portraitDismissed = false;
+
+      function updateHUD() {
+        document.getElementById('hud-score').textContent = gameState.score;
+        document.getElementById('hud-highscore').textContent = gameState.highScore;
+        document.getElementById('hud-coins').textContent = gameState.coins;
+
+        const dlssInfo = DLSS_PRESETS[rtxConfig.dlssMode] || DLSS_PRESETS.quality;
+        document.getElementById('hud-fps-dlss').textContent = `${gameState.fps} • ${dlssInfo.label}`;
+
+        const windStr = `${envState.currentWindLabel} ${Math.round(envState.windSpeed)} km/j`;
+        document.getElementById('hud-time-desktop').textContent = envState.currentTimeLabel;
+        document.getElementById('hud-weather-desktop').textContent = envState.currentWeatherLabel;
+        document.getElementById('hud-fog-desktop').textContent = envState.currentFogLabel;
+        document.getElementById('hud-wind-desktop').textContent = windStr;
+
+        document.getElementById('hud-time-mobile').textContent = envState.currentTimeLabel;
+        document.getElementById('hud-weather-mobile').textContent = envState.currentWeatherLabel;
+        document.getElementById('hud-fog-mobile').textContent = envState.currentFogLabel;
+        document.getElementById('hud-wind-mobile').textContent = `${Math.round(envState.windSpeed)} km/j`;
+
+        document.getElementById('val-wetness').textContent = `${Math.round(envState.wetness * 100)}%`;
+      }
+
+      function checkOrientationPill() {
+        const pill = document.getElementById('portrait-pill');
+        const isPortrait = window.innerHeight > window.innerWidth && window.innerWidth < 768;
+        if (isPortrait && !portraitDismissed) {
+          pill.classList.remove('hidden');
+        } else {
+          pill.classList.add('hidden');
+        }
+      }
+
+      async function enterFullscreenAndLandscape() {
+        try {
+          const el = document.documentElement;
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (el.requestFullscreen) await el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+          }
+        } catch (e) {}
+
+        try {
+          if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock('landscape');
+          }
+        } catch (e) {}
+
+        updateFullscreenButtonUI();
+        rebuildRenderTargets();
+        checkOrientationPill();
+      }
+
+      function toggleFullscreen() {
+        try {
+          const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+          if (!isFs) {
+            enterFullscreenAndLandscape();
+          } else {
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          }
+        } catch (e) {}
+      }
+
+      function updateFullscreenButtonUI() {
+        const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+        document.getElementById('icon-fs-enter').classList.toggle('hidden', isFs);
+        document.getElementById('icon-fs-exit').classList.toggle('hidden', !isFs);
+        document.getElementById('text-fullscreen').textContent = isFs ? 'Keluar Layar Penuh' : 'Layar Penuh';
+      }
+
+      document.addEventListener('fullscreenchange', () => {
+        updateFullscreenButtonUI();
+        rebuildRenderTargets();
+        checkOrientationPill();
+      });
+      document.addEventListener('webkitfullscreenchange', () => {
+        updateFullscreenButtonUI();
+        rebuildRenderTargets();
+        checkOrientationPill();
+      });
+
+      window.addEventListener('resize', () => {
+        rebuildRenderTargets();
+        checkOrientationPill();
+      });
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+          rebuildRenderTargets();
+          checkOrientationPill();
+        }, 120);
+      });
+
+      function startNewGame() {
+        sound.init();
+        sound.resume();
+
+        lanes.clear();
+        solidPoles.length = 0;
+
+        player.pos = { x: 0, y: 0, z: 0 };
+        player.vel = { x: 0, y: 0, z: 0 };
+        player.yaw = 0;
+        player.pitch = -0.10;
+        player.targetYaw = null;
+        player.onGround = true;
+        player.bobOffset = 0;
+        player.landingDip = 0;
+        player.tiltRoll = 0;
+        player.carryingVx = 0;
+        player.stridePhase = 0;
+        player.moveBlend = 0;
+        player.jumpBlend = 0;
+
+        gameState.score = 0;
+        gameState.coins = 0;
+        gameState.maxLaneReached = 0;
+        gameState.cameraShake = 0;
+        gameState.phase = 'playing';
+
+        ensureLanesAround(0);
+
+        document.getElementById('start-overlay').classList.add('hidden');
+        document.getElementById('gameover-overlay').classList.add('hidden');
+        document.getElementById('rtx-settings-panel').classList.add('hidden');
+        document.getElementById('controls-hint').classList.remove('hidden');
+        updateHUD();
+      }
+
+      document.getElementById('btn-start-game').addEventListener('click', () => {
+        startNewGame();
+        if ('ontouchstart' in window) {
+          enterFullscreenAndLandscape();
+        }
+      });
+
+      document.getElementById('btn-start-fullscreen').addEventListener('click', () => {
+        enterFullscreenAndLandscape();
+      });
+
+      document.getElementById('btn-restart-game').addEventListener('click', () => {
+        startNewGame();
+      });
+
+      document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
+      document.getElementById('btn-pill-landscape').addEventListener('click', enterFullscreenAndLandscape);
+      document.getElementById('btn-pill-dismiss').addEventListener('click', () => {
+        portraitDismissed = true;
+        document.getElementById('portrait-pill').classList.add('hidden');
+      });
+
+      document.getElementById('btn-mute').addEventListener('click', () => {
+        sound.init();
+        sound.muted = !sound.muted;
+        document.getElementById('icon-sound-on').classList.toggle('hidden', sound.muted);
+        document.getElementById('icon-sound-off').classList.toggle('hidden', !sound.muted);
+      });
+
+      const settingsPanel = document.getElementById('rtx-settings-panel');
+      document.getElementById('btn-toggle-settings').addEventListener('click', () => {
+        settingsPanel.classList.toggle('hidden');
+      });
+      document.getElementById('btn-close-settings').addEventListener('click', () => {
+        settingsPanel.classList.add('hidden');
+      });
+
+      // DLSS Sharpen & Render Distance
+      document.getElementById('slider-dlss-sharpen').addEventListener('input', (e) => {
+        rtxConfig.dlssSharpen = parseFloat(e.target.value);
+        document.getElementById('val-dlss-sharpen').textContent = rtxConfig.dlssSharpen.toFixed(2);
+      });
+
+      document.getElementById('slider-render-dist').addEventListener('input', (e) => {
+        rtxConfig.renderDistance = parseInt(e.target.value, 10);
+        document.getElementById('val-render-dist').textContent = `${rtxConfig.renderDistance}m`;
+      });
+
+      // Toggle Real-Time Shadows
+      const btnShadows = document.getElementById('btn-toggle-shadows');
+      btnShadows.addEventListener('click', () => {
+        rtxConfig.shadowsEnabled = !rtxConfig.shadowsEnabled;
+        btnShadows.textContent = rtxConfig.shadowsEnabled ? 'PCF SOFT ON' : 'OFF';
+        btnShadows.style.background = rtxConfig.shadowsEnabled ? 'rgba(16,185,129,0.28)' : 'rgba(244,63,94,0.25)';
+        btnShadows.style.color = rtxConfig.shadowsEnabled ? '#6ee7b7' : '#fda4af';
+        btnShadows.style.borderColor = rtxConfig.shadowsEnabled ? 'rgba(52,211,153,0.5)' : 'rgba(244,63,94,0.45)';
+      });
+
+      // Kecerahan (Exposure)
+      document.getElementById('slider-brightness').addEventListener('input', (e) => {
+        rtxConfig.brightness = parseFloat(e.target.value);
+        document.getElementById('val-brightness').textContent = `${rtxConfig.brightness.toFixed(2)}x`;
+      });
+
+      // Bloom Controls
+      const btnBloom = document.getElementById('btn-toggle-bloom');
+      btnBloom.addEventListener('click', () => {
+        rtxConfig.bloomEnabled = !rtxConfig.bloomEnabled;
+        btnBloom.textContent = rtxConfig.bloomEnabled ? 'AKTIF' : 'MATI';
+        btnBloom.style.background = rtxConfig.bloomEnabled ? 'rgba(16,185,129,0.28)' : 'rgba(244,63,94,0.25)';
+        btnBloom.style.color = rtxConfig.bloomEnabled ? '#6ee7b7' : '#fda4af';
+        btnBloom.style.borderColor = rtxConfig.bloomEnabled ? 'rgba(52,211,153,0.5)' : 'rgba(244,63,94,0.45)';
+      });
+
+      document.getElementById('slider-bloom-strength').addEventListener('input', (e) => {
+        rtxConfig.bloomStrength = parseFloat(e.target.value);
+        document.getElementById('val-bloom-strength').textContent = rtxConfig.bloomStrength.toFixed(2);
+      });
+
+      document.getElementById('slider-bloom-radius').addEventListener('input', (e) => {
+        rtxConfig.bloomRadius = parseFloat(e.target.value);
+        document.getElementById('val-bloom-radius').textContent = rtxConfig.bloomRadius.toFixed(2);
+      });
+
+      document.getElementById('slider-bloom-threshold').addEventListener('input', (e) => {
+        rtxConfig.bloomThreshold = parseFloat(e.target.value);
+        document.getElementById('val-bloom-threshold').textContent = rtxConfig.bloomThreshold.toFixed(2);
+      });
+
+      document.getElementById('slider-fog-density').addEventListener('input', (e) => {
+        rtxConfig.fogManualDensity = parseFloat(e.target.value);
+        rtxConfig.fogMode = 'manual';
+        document.getElementById('val-fog-density').textContent = rtxConfig.fogManualDensity.toFixed(3);
+        document.getElementById('val-fog-mode').textContent = 'Manual';
+        document.querySelectorAll('.fog-btn').forEach(b => b.classList.remove('active-teal'));
+      });
+
+      const btnInvertCam = document.getElementById('btn-toggle-invert-cam');
+      btnInvertCam.addEventListener('click', () => {
+        rtxConfig.invertCameraAxis = !rtxConfig.invertCameraAxis;
+        btnInvertCam.textContent = rtxConfig.invertCameraAxis ? 'ON (Terbalik)' : 'OFF';
+        btnInvertCam.style.background = rtxConfig.invertCameraAxis ? 'rgba(56,189,248,0.28)' : 'rgba(148,163,184,0.2)';
+        btnInvertCam.style.color = rtxConfig.invertCameraAxis ? '#7dd3fc' : '#cbd5e1';
+        btnInvertCam.style.borderColor = rtxConfig.invertCameraAxis ? 'rgba(56,189,248,0.5)' : 'rgba(148,163,184,0.38)';
+      });
+
+      document.getElementById('slider-cam-sensitivity').addEventListener('input', (e) => {
+        rtxConfig.cameraSensitivity = parseFloat(e.target.value);
+        document.getElementById('val-cam-sensitivity').textContent = `${rtxConfig.cameraSensitivity.toFixed(2)}x`;
+      });
+
+      function bindOptionGroup(selector, activeClass, callback) {
+        const buttons = document.querySelectorAll(selector);
+        buttons.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            buttons.forEach((b) => b.classList.remove(activeClass));
+            btn.classList.add(activeClass);
+            callback(btn);
+          });
+        });
+      }
+
+      bindOptionGroup('.dlss-btn', 'active-emerald', (btn) => {
+        rtxConfig.dlssMode = btn.dataset.dlss;
+        const info = DLSS_PRESETS[rtxConfig.dlssMode] || DLSS_PRESETS.quality;
+        document.getElementById('val-dlss-mode').textContent = info.fullText;
+        rebuildRenderTargets();
+        updateHUD();
+      });
+
+      bindOptionGroup('.res-btn', 'active-sky', (btn) => {
+        rtxConfig.resolutionScale = parseFloat(btn.dataset.res);
+        rebuildRenderTargets();
+      });
+
+      bindOptionGroup('.time-btn', 'active-amber', (btn) => {
+        rtxConfig.timeMode = btn.dataset.time;
+        document.getElementById('val-time-mode').textContent = btn.textContent;
+      });
+
+      bindOptionGroup('.weather-btn', 'active-sky', (btn) => {
+        rtxConfig.weatherMode = btn.dataset.weather;
+        document.getElementById('val-weather-mode').textContent = btn.textContent;
+      });
+
+      bindOptionGroup('.fog-btn', 'active-teal', (btn) => {
+        rtxConfig.fogMode = btn.dataset.fog;
+        document.getElementById('val-fog-mode').textContent = btn.textContent;
+        if (rtxConfig.fogMode === 'random') {
+          envState.fogTimer = 0.2;
+        }
+      });
+
+      bindOptionGroup('.wind-btn', 'active-indigo', (btn) => {
+        rtxConfig.windMode = btn.dataset.wind;
+        document.getElementById('val-wind-mode').textContent = btn.textContent;
+      });
+
+      // =======================================================================
+      // 15. INISIALISASI AWAL & LOOP ANIMASI UTAMA (DENGAN PENGHITUNG FPS)
+      // =======================================================================
+      let lastFrameTime = performance.now();
+      let hudSyncTimer = 0;
+      let frameCounter = 0;
+      let fpsTimer = 0;
+
+      function mainLoop(now) {
+        const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) * 0.001));
+        lastFrameTime = now;
+
+        frameCounter++;
+        fpsTimer += dt;
+        if (fpsTimer >= 0.4) {
+          gameState.fps = Math.min(120, Math.round(frameCounter / fpsTimer));
+          frameCounter = 0;
+          fpsTimer = 0;
+        }
+
+        updateSimulation(dt);
+        renderFrame();
+
+        hudSyncTimer += dt;
+        if (hudSyncTimer >= 0.12) {
+          hudSyncTimer = 0;
+          updateHUD();
+        }
+
+        requestAnimationFrame(mainLoop);
+      }
+
+      window.addEventListener('load', () => {
+        rebuildRenderTargets();
+        ensureLanesAround(0);
+        updateHUD();
+        checkOrientationPill();
+        requestAnimationFrame(mainLoop);
+      });
+    })();
+  </script>
+</body>
+</html>
